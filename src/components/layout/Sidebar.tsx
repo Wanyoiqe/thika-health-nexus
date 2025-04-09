@@ -25,6 +25,9 @@ interface SidebarLinkProps {
   children: React.ReactNode;
 }
 
+// Define a type for the user roles to make TypeScript aware of the possible values
+type UserRole = 'admin' | 'provider' | 'patient';
+
 // Navigation links based on user roles - we'll expand this later
 const navLinks = {
   common: [
@@ -47,7 +50,7 @@ const navLinks = {
 };
 
 // Will replace with actual role-based rendering
-const userRole = "provider"; // Temporary for layout
+const userRole: UserRole = "provider"; // Temporary for layout
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
   const { pathname } = useLocation();
