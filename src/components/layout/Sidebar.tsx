@@ -1,0 +1,192 @@
+
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { 
+  Home, 
+  Users, 
+  ClipboardList, 
+  Calendar, 
+  Settings, 
+  ShieldCheck, 
+  Lock, 
+  BarChart4,
+  UserCog,
+  Shield,
+} from "lucide-react";
+
+interface SidebarProps {
+  open: boolean;
+}
+
+interface SidebarLinkProps {
+  to: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}
+
+// Navigation links based on user roles - we'll expand this later
+const navLinks = {
+  common: [
+    { to: "/dashboard", label: "Dashboard", icon: Home },
+    { to: "/appointments", label: "Appointments", icon: Calendar },
+  ],
+  provider: [
+    { to: "/patients", label: "Patients", icon: Users },
+    { to: "/records", label: "Medical Records", icon: ClipboardList },
+  ],
+  admin: [
+    { to: "/users", label: "User Management", icon: UserCog },
+    { to: "/analytics", label: "Analytics", icon: BarChart4 }, 
+    { to: "/system", label: "System Settings", icon: Settings },
+  ],
+  patient: [
+    { to: "/my-records", label: "My Records", icon: ClipboardList },
+    { to: "/consent", label: "Consent Management", icon: Lock },
+  ],
+};
+
+// Will replace with actual role-based rendering
+const userRole = "provider"; // Temporary for layout
+
+const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
+  const { pathname } = useLocation();
+  const isActive = pathname === to;
+  
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "nav-link",
+        isActive && "active"
+      )}
+    >
+      <Icon className="h-5 w-5" />
+      <span>{children}</span>
+    </Link>
+  );
+};
+
+const Sidebar: React.FC<SidebarProps> = ({ open }) => {
+  const location = useLocation();
+  
+  // Determine which links to show based on role
+  const roleLinks = userRole === 'admin' 
+    ? [...navLinks.common, ...navLinks.provider, ...navLinks.admin]
+    : userRole === 'provider' 
+      ? [...navLinks.common, ...navLinks.provider]
+      : [...navLinks.common, ...navLinks.patient];
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className={cn(
+      "w-64 flex-shrink-0 border-r border-gray-200 bg-white z-20",
+      "fixed md:static inset-y-0 left-0 transform md:translate-x-0 transition-transform duration-200 ease-in-out",
+      !open && "-translate-x-full"
+    )}>
+      <div className="h-16 border-b border-gray-200 flex items-center px-4 md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-healthcare-primary flex items-center justify-center text-white font-bold">
+            T
+          </div>
+          <span className="font-semibold text-lg">
+            Thika Health
+          </span>
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <nav className="space-y-6">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              General
+            </p>
+            {navLinks.common.map((link) => (
+              <SidebarLink 
+                key={link.to} 
+                to={link.to} 
+                icon={link.icon}
+              >
+                {link.label}
+              </SidebarLink>
+            ))}
+          </div>
+          
+          {userRole !== 'patient' && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Clinical
+              </p>
+              {navLinks.provider.map((link) => (
+                <SidebarLink 
+                  key={link.to} 
+                  to={link.to} 
+                  icon={link.icon}
+                >
+                  {link.label}
+                </SidebarLink>
+              ))}
+            </div>
+          )}
+          
+          {userRole === 'patient' && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                My Health
+              </p>
+              {navLinks.patient.map((link) => (
+                <SidebarLink 
+                  key={link.to} 
+                  to={link.to} 
+                  icon={link.icon}
+                >
+                  {link.label}
+                </SidebarLink>
+              ))}
+            </div>
+          )}
+          
+          {userRole === 'admin' && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Administration
+              </p>
+              {navLinks.admin.map((link) => (
+                <SidebarLink 
+                  key={link.to} 
+                  to={link.to} 
+                  icon={link.icon}
+                >
+                  {link.label}
+                </SidebarLink>
+              ))}
+            </div>
+          )}
+          
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Account
+            </p>
+            <SidebarLink to="/profile" icon={UserCog}>
+              Profile
+            </SidebarLink>
+            <SidebarLink to="/settings" icon={Settings}>
+              Settings
+            </SidebarLink>
+          </div>
+          
+          <div className="space-y-1">
+            <SidebarLink to="/privacy" icon={Shield}>
+              Privacy & Security
+            </SidebarLink>
+          </div>
+        </nav>
+      </div>
+    </div>
+  );
+};
+
+export default Sidebar;
