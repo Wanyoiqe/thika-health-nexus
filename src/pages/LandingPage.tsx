@@ -26,7 +26,7 @@ const LandingPage: React.FC = () => {
           
           <div className="flex items-center gap-3">
             <Link to="/auth/login">
-              <Button variant="outline">Log In</Button>
+              <Button>Log In</Button>
             </Link>
             <Link to="/auth/register">
               <Button>Register</Button>
@@ -47,7 +47,7 @@ const LandingPage: React.FC = () => {
                 Connect clinics, healthcare providers, and patients with a secure, integrated health records system built for Thika.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <Link to="/auth/register">
+                <Link to="./components/auth/RegisterForm">
                   <Button className="bg-white text-healthcare-primary hover:bg-gray-100 px-8 py-6">
                     Get Started
                   </Button>
@@ -60,29 +60,7 @@ const LandingPage: React.FC = () => {
                 </Link>
               </div>
             </div>
-            <div className="hidden md:block">
-              <div className="bg-white rounded-lg shadow-xl overflow-hidden transform rotate-1">
-                <div className="p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-full bg-healthcare-primary flex items-center justify-center text-white">
-                      <Shield className="h-5 w-5" />
-                    </div>
-                    <h3 className="font-semibold text-lg">Thika Health Records</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="h-10 bg-gray-100 rounded-md"></div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="h-20 bg-gray-100 rounded-md"></div>
-                      <div className="h-20 bg-gray-100 rounded-md"></div>
-                    </div>
-                    <div className="h-40 bg-gray-100 rounded-md"></div>
-                    <div className="flex justify-end">
-                      <div className="w-1/3 h-10 bg-healthcare-primary rounded-md"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            
           </div>
         </div>
       </section>
@@ -221,7 +199,7 @@ const LandingPage: React.FC = () => {
               </Button>
             </Link>
             <Link to="/auth/login">
-              <Button variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6">
+              <Button variant="outline" className="bg-white text-healthcare-primary hover:bg-gray-100 px-8 py-6">
                 Sign In
               </Button>
             </Link>

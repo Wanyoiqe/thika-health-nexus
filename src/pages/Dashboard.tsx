@@ -1,124 +1,139 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import AppointmentList from "@/components/dashboard/AppointmentList";
 import RecentRecords from "@/components/dashboard/RecentRecords";
 import ConsentRequests from "@/components/dashboard/ConsentRequests";
+import PatientOverview from "@/pages/PatientOverview";
 import { 
-  Users, 
-  Calendar, 
-  FileText, 
-  Bell,
-  ShieldAlert,
-  Activity,
-  LineChart,
-  UserCheck,
+  Users, Calendar, FileText, Bell, ShieldAlert, Activity, 
+  LineChart, UserCheck, ClipboardList, HeartPulse, Stethoscope 
 } from "lucide-react";
 
 const Dashboard: React.FC = () => {
+  // Fallback role system (replace with real auth when ready)
+  const [role, setRole] = useState<"patient" | "provider">("provider");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Try to get role from multiple sources
+    const determineRole = () => {
+      // 1. Check URL first (for testing)
+      const params = new URLSearchParams(window.location.search);
+      const urlRole = params.get("role");
+      
+      // 2. Check localStorage (if you store role there after login)
+      const localStorageRole = localStorage.getItem("userRole");
+      
+      // 3. Default fallback
+      setRole(
+        urlRole === "patient" ? "patient" :
+        localStorageRole === "patient" ? "patient" :
+        "provider" // Default to provider view
+      );
+      setLoading(false);
+    };
+
+    determineRole();
+  }, []);
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center h-64">
+          <p>Loading dashboard...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-gray-500">
-            Welcome back, Dr. Kamau. Here's an overview of your clinic.
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Patients"
-            value="1,248"
-            description="Active patient records"
-            icon={<Users className="h-5 w-5" />}
-            change={{ value: "5.2%", positive: true }}
-          />
-          <StatCard
-            title="Appointments"
-            value="37"
-            description="Scheduled this week"
-            icon={<Calendar className="h-5 w-5" />}
-            change={{ value: "2.1%", positive: true }}
-          />
-          <StatCard
-            title="Medical Records"
-            value="283"
-            description="Updated this month"
-            icon={<FileText className="h-5 w-5" />}
-            change={{ value: "12.3%", positive: true }}
-          />
-          <StatCard
-            title="Consent Requests"
-            value="8"
-            description="Pending approval"
-            icon={<ShieldAlert className="h-5 w-5" />}
-            change={{ value: "3.7%", positive: false }}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <RecentRecords />
-          </div>
-          <div>
-            <ConsentRequests />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <AppointmentList />
-          </div>
-          <div>
-            <div className="healthcare-card p-4 space-y-4">
-              <h3 className="font-medium text-lg">System Health</h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-green-500" />
-                    <span>System Status</span>
-                  </div>
-                  <div className="text-green-500 font-medium">Operational</div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <LineChart className="h-5 w-5 text-blue-500" />
-                    <span>Server Performance</span>
-                  </div>
-                  <div className="text-blue-500 font-medium">98%</div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="h-5 w-5 text-amber-500" />
-                    <span>Security Updates</span>
-                  </div>
-                  <div className="text-amber-500 font-medium">Available</div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-violet-500" />
-                    <span>User Permissions</span>
-                  </div>
-                  <div className="text-violet-500 font-medium">Up to date</div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-red-500" />
-                    <span>Emergency Alerts</span>
-                  </div>
-                  <div className="text-red-500 font-medium">No alerts</div>
-                </div>
+        {/* Role-based header */}
+        {role === "provider" ? (
+          <>
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Provider Dashboard</h1>
+              <p className="text-gray-500">
+                Welcome back, Dr. Kamau. Here's your clinic overview.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Total Patients"
+                value="1,248"
+                description="Active records"
+                icon={<Users className="h-5 w-5" />}
+                change={{ value: "+5.2%", positive: true }}
+              />
+              {/* ... other provider stat cards ... */}
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Patient Dashboard</h1>
+              <p className="text-gray-500">
+                Welcome back! Here's your health summary.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Upcoming Appointments"
+                value="2"
+                description="Next 7 days"
+                icon={<Calendar className="h-5 w-5" />}
+                change={{ value: "1 new", positive: true }}
+              />
+              {/* ... other patient stat cards ... */}
+            </div>
+          </>
+        )}
+
+        {/* Role-specific content sections */}
+        {role === "provider" ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <RecentRecords />
+              </div>
+              <div>
+                <ConsentRequests />
               </div>
             </div>
+            <AppointmentList />
           </div>
-        </div>
+        ) : (
+          <PatientOverview />
+        )}
+
+        {/* Temporary role switcher for development */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="fixed bottom-4 right-4 bg-white p-3 shadow-lg rounded-lg border">
+            <p className="text-sm font-medium mb-2">DEV: Switch View</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRole("provider")}
+                className={`px-3 py-1 text-xs rounded ${
+                  role === "provider" ? "bg-blue-600 text-white" : "bg-blue-100"
+                }`}
+              >
+                Provider
+              </button>
+              <button
+                onClick={() => setRole("patient")}
+                className={`px-3 py-1 text-xs rounded ${
+                  role === "patient" ? "bg-green-600 text-white" : "bg-green-100"
+                }`}
+              >
+                Patient
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );
