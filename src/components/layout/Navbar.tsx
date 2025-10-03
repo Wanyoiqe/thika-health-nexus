@@ -18,6 +18,14 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    // Redirect to login page
+    window.location.href = '/auth/login';
+  };
+
   return (
     <header className="sticky top-0 z-30 w-full bg-white border-b border-gray-200">
       <div className="px-4 h-16 flex items-center justify-between">
@@ -75,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <Link to="/auth/logout">Log out</Link>
+                <button onClick={handleLogout} className="w-full text-left">Logout</button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

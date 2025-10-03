@@ -22,7 +22,7 @@ const Login: React.FC = () => {
     password: "",
   });
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { loginUtil } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,7 +33,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(formData.email, formData.password);
+      await loginUtil(formData.email, formData.password);
       // Set default role to patient (this should come from backend in production)
       localStorage.setItem("userRole", "patient");
       toast.success("Login successful! Welcome back 👋");

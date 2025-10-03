@@ -1,16 +1,26 @@
-// src/context/AuthContext.tsx
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { register, login } from './apis/auth';
 
 type User = {
   id: number;
   firstName: string;
+  lastName: string;
   email: string;
-  role: 'patient' | 'provider' | 'receptionist' | 'admin'; 
+  phone: string;
+  role: 'patient' | 'provider' | 'receptionist' | 'admin';
 };
 
 type AuthContextType = {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  registerPatient: (formData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: 'patient' | 'provider';
+  }) => Promise<void>;
+  loginUtil: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
@@ -26,31 +36,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Mock users
-  const mockUsers: User[] = [
-    {
-      id: 1,
-      firstName: 'Alice',
-      email: 'patient@health.com',
-      role: 'patient',
-    },
-    {
-      id: 2,
-      firstName: 'Dr. Bob',
-      email: 'provider@health.com',
-      role: 'provider',
-    },
-  ];
-
-  const login = async (email: string, password: string) => {
-    // Simulate authentication
-    const foundUser = mockUsers.find(u => u.email === email);
-    if (foundUser && password === 'password') {
-      setUser(foundUser);
-      localStorage.setItem('user', JSON.stringify(foundUser));
-    } else {
-      throw new Error('Invalid credentials');
+  const registerPatient = async (formData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: 'patient' | 'provider';
+  }) => {
+    try {
+      const response = await register(formData);
+      // Optionally set user state if registration logs in the user
+      // setUser(response.user);
+      // localStorage.setItem('user', JSON.stringify(response.user));
+    } catch (error: any) {
+      throw new Error(error.message || 'Registration failed');
     }
+  };
+
+  const loginUtil = async (email: string, password: string) => {
+    const response = await login(email, password);
+    setUser(response.user);
+    localStorage.setItem('user', JSON.stringify(response.user));
   };
 
   const logout = () => {
@@ -59,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, registerPatient, loginUtil, logout }}>
       {children}
     </AuthContext.Provider>
   );

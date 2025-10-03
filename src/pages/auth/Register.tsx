@@ -18,21 +18,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
 import { Lock, Mail, User, Phone } from "lucide-react";
+import { useAuth } from "@/AuthContext";
+import { toast } from "react-hot-toast";
 
 const Register: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    role: "patient",
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    role: 'patient' as 'patient' | 'provider',
   });
-  const { toast } = useToast();
+  const { registerPatient } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,7 +41,7 @@ const Register: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleRoleChange = (value: string) => {
+  const handleRoleChange = (value: 'patient' | 'provider') => {
     setFormData((prev) => ({ ...prev, role: value }));
   };
 
@@ -49,46 +50,21 @@ const Register: React.FC = () => {
     setIsLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match.",
-        variant: "destructive",
-      });
+      toast.error("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
     try {
       console.log("Submitting form data:", formData); // for debugging
+      await registerPatient(formData);
 
-      const response = await fetch("http://localhost:5000/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Registration failed");
-      }
-
-      toast({
-        title: "Registration successful!",
-        description: "Your account has been created. Please log in.",
-      });
-
-      // Set default role to patient
-      localStorage.setItem("userRole", formData.role);
+      toast.success('Registration successful! Please log in.');
+      localStorage.setItem('userRole', formData.role);
       navigate("/auth/login");
     } catch (error: any) {
-      toast({
-        title: "Registration failed",
-        description: error?.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
+      toast.error(error?.message || "Registration failed. Please try again.");
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
