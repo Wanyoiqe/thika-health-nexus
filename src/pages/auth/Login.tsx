@@ -11,8 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
 import { Lock, Mail } from "lucide-react";
+import { useAuth } from "@/AuthContext";
+import { toast } from "react-hot-toast";
 
 const Login: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -20,9 +21,8 @@ const Login: React.FC = () => {
     email: "",
     password: "",
   });
-
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,37 +32,13 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      const response = await fetch("http://localhost:5000/api/users/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Login failed");
-      }
-
-      // ✅ Save JWT token to localStorage
-      localStorage.setItem("token", result.token);
-
-      toast({
-        title: "Login successful!",
-        description: "Welcome back 👋",
-      });
-
-      navigate("/dashboard"); // redirect user after login
+      await login(formData.email, formData.password);
+      toast.success("Login successful! Welcome back 👋");
+      navigate("/patient/dashboard");
     } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error?.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
+      console.error("Login failed:", error);
+      toast.error(error?.message || "Invalid credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +90,11 @@ const Login: React.FC = () => {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Logging in..." : "Log in"}
           </Button>
+          <div className="text-xs text-gray-500 mt-2">
+            <div>Demo credentials:</div>
+            <div>Patient: patient@health.com / password</div>
+            <div>Provider: provider@health.com / password</div>
+          </div>
         </form>
       </CardContent>
       <CardFooter className="flex justify-center">

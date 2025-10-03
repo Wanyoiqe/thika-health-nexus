@@ -5,7 +5,7 @@ type User = {
   id: number;
   firstName: string;
   email: string;
-  role: 'patient' | 'provider';
+  role: 'patient' | 'provider' | 'receptionist' | 'admin'; 
 };
 
 type AuthContextType = {
@@ -20,27 +20,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check for logged-in user on initial load
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
 
+  // Mock users
+  const mockUsers: User[] = [
+    {
+      id: 1,
+      firstName: 'Alice',
+      email: 'patient@health.com',
+      role: 'patient',
+    },
+    {
+      id: 2,
+      firstName: 'Dr. Bob',
+      email: 'provider@health.com',
+      role: 'provider',
+    },
+  ];
+
   const login = async (email: string, password: string) => {
-    // Call your backend login API
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    const data = await response.json();
-    if (response.ok) {
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data.user));
+    // Simulate authentication
+    const foundUser = mockUsers.find(u => u.email === email);
+    if (foundUser && password === 'password') {
+      setUser(foundUser);
+      localStorage.setItem('user', JSON.stringify(foundUser));
     } else {
-      throw new Error(data.error || 'Login failed');
+      throw new Error('Invalid credentials');
     }
   };
 
