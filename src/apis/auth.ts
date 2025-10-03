@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { LoginResponse } from '../types';  
 
 const API_URL = 'http://localhost:5000' // Replace with your backend URL
 
@@ -25,7 +26,7 @@ export const publicAPIUtil = () => {
 
 export const login = async (email: string, password: string) => {
   try {
-    const response = await publicAPIUtil().post('/api/users/login', { email, password });
+    const response = await publicAPIUtil().post<LoginResponse>("/api/users/login", { email, password });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Login failed');

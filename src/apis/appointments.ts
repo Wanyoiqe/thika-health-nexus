@@ -1,8 +1,9 @@
 import axios from "axios";
+import type { getAllAppointmentsDTO } from "../types";
 
 const API_URL = "http://localhost:5000"; // Replace with your backend URL
 
-//Private API utility (with token)
+// Private API utility (with token)
 export const privateAPIUtil = (token: string) => {
   return axios.create({
     baseURL: API_URL,
@@ -13,7 +14,7 @@ export const privateAPIUtil = (token: string) => {
   });
 };
 
-//Public API utility (no token)
+// Public API utility (no token)
 export const publicAPIUtil = () => {
   return axios.create({
     baseURL: API_URL,
@@ -26,22 +27,21 @@ export const publicAPIUtil = () => {
 // Book appointment
 export const bookAppointment = async (
   token: string,
-  firstName: string,
-  email: string,
-  password: string
+  date_time: string,
+  provider_id: string | null
 ) => {
-    try {
-        const response = await privateAPIUtil(token).post('/api/appointments/book', { firstName, email, password });
-        return response.data;
-    } catch (error: any) {
-        throw new Error(error.response?.data?.message || 'Booking appointment failed');
-    }
+  try {
+    const response = await privateAPIUtil(token).post('/api/appointments/book', { date_time, provider_id });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Booking appointment failed');
+  }
 };
 
 // Get all appointments
 export const getAllAppointments = async (token: string) => {
   try {
-    const response = await privateAPIUtil(token).get(`/api/appointments`);
+    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>(`/api/appointments`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch appointments');
@@ -68,12 +68,12 @@ export const getUpcomingAppointments = async (token: string) => {
   }
 };
 
-// Fetch user profile
-export const fetchUserProfile = async (token: string) => {
-    try {
-        const response = await privateAPIUtil(token).get('/api/users/fetch_profile');
-        return response.data;
-    } catch (error: any) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch user profile');
-    }
+// Get available doctors for a time window
+export const getAvailableDoctors = async (from: string, to: string) => {
+  try {
+    const response = await publicAPIUtil().post('/api/appointments/available', { from, to });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch available doctors');
+  }
 };

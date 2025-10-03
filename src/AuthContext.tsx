@@ -1,7 +1,9 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { register, login } from './apis/auth';
+import Cookies from 'js-cookie';
+import { register, login, fetchUserProfile } from './apis/auth';
+import type { LoginResponse } from './types';
 
-type User = {
+export type User = {
   id: number;
   firstName: string;
   lastName: string;
@@ -10,8 +12,10 @@ type User = {
   role: 'patient' | 'provider' | 'receptionist' | 'admin';
 };
 
-type AuthContextType = {
+export type AuthContextType = {
   user: User | null;
+  refreshToken: string;
+  refreshUser?: () => Promise<void>;
   registerPatient: (formData: {
     firstName: string;
     lastName: string;
@@ -28,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string>('');
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -35,6 +40,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(JSON.parse(storedUser));
     }
   }, []);
+
+  const refreshUser = async () => {
+    try {
+      if (!refreshToken) return;
+      const data = await fetchUserProfile(refreshToken);
+      console.log("Fetched user profile:", data); // for debugging
+      // setUser(data.user);
+      // localStorage.setItem('user', JSON.stringify(data.user));
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
 
   const registerPatient = async (formData: {
     firstName: string;
@@ -46,6 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }) => {
     try {
       const response = await register(formData);
+      console.log("Registration response:", response); // for debugging
       // Optionally set user state if registration logs in the user
       // setUser(response.user);
       // localStorage.setItem('user', JSON.stringify(response.user));
@@ -54,10 +72,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+
+
   const loginUtil = async (email: string, password: string) => {
     const response = await login(email, password);
+    console.log("Login response:", response);
     setUser(response.user);
     localStorage.setItem('user', JSON.stringify(response.user));
+    setRefreshToken(response.token);
+    Cookies.set('refreshToken', response.token, { expires: 7 });
   };
 
   const logout = () => {
@@ -66,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, registerPatient, loginUtil, logout }}>
+    <AuthContext.Provider value={{ user,refreshToken, refreshUser, registerPatient, loginUtil, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,61 +6,46 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MainLayout from '@/components/layout/MainLayout';
 import { Clock, Calendar as CalendarIcon, ChevronRight, FileText } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addHours } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-
-// Mock doctor data
-const mockDoctors = [
-  {
-    id: 1,
-    name: 'Dr. Sarah Johnson',
-    specialization: 'Cardiologist',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop',
-    availableTimes: ['09:00 AM', '11:00 AM', '02:00 PM', '04:00 PM'],
-  },
-  {
-    id: 2,
-    name: 'Dr. Michael Chen',
-    specialization: 'Pediatrician',
-    image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop',
-    availableTimes: ['10:00 AM', '01:00 PM', '03:00 PM', '05:00 PM'],
-  },
-  {
-    id: 3,
-    name: 'Dr. Emily Rodriguez',
-    specialization: 'Dermatologist',
-    image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop',
-    availableTimes: ['08:00 AM', '10:30 AM', '01:30 PM', '04:30 PM'],
-  },
-  {
-    id: 4,
-    name: 'Dr. James Williams',
-    specialization: 'Orthopedic Surgeon',
-    image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200&h=200&fit=crop',
-    availableTimes: ['09:30 AM', '12:00 PM', '02:30 PM', '05:00 PM'],
-  },
-  {
-    id: 5,
-    name: 'Dr. Lisa Anderson',
-    specialization: 'Neurologist',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop',
-    availableTimes: ['08:30 AM', '11:30 AM', '02:00 PM', '04:00 PM'],
-  },
-  {
-    id: 6,
-    name: 'Dr. David Kim',
-    specialization: 'General Practitioner',
-    image: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&h=200&fit=crop',
-    availableTimes: ['09:00 AM', '11:00 AM', '01:00 PM', '03:00 PM'],
-  },
-];
+import { useAuth } from '@/AuthContext';
+import { bookAppointment, getAvailableDoctors } from '@/apis/appointments';
+import { BookAppointmentRequestDTO, Provider } from '@/types';
 
 const AppointmentBooking: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
-  const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
+  const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
+  const [doctors, setDoctors] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (selectedDate) {
+      // Fetch available doctors for the selected date (24-hour window)
+      const from = selectedDate.toISOString();
+      const to = addHours(selectedDate, 24).toISOString();
+      fetchAvailableDoctors({ from, to });
+    }
+  }, [selectedDate]);
+
+  const fetchAvailableDoctors = async (data: { from: string; to: string }) => {
+    setIsLoading(true);
+    try {
+      const response = await getAvailableDoctors(data);
+      setDoctors(response.available);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch available doctors',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -72,19 +57,60 @@ const AppointmentBooking: React.FC = () => {
     setSelectedTime(time);
   };
 
-  const handleBookAppointment = (doctorId: number) => {
-    setSelectedDoctor(doctorId);
-    const doctor = mockDoctors.find(d => d.id === doctorId);
-    
-    toast({
-      title: "Appointment Booked Successfully!",
-      description: `Your appointment with ${doctor?.name} on ${format(selectedDate!, 'MMMM dd, yyyy')} at ${selectedTime} has been confirmed.`,
-    });
+  const handleBookAppointment = async (doctorId: string) => {
+    if (!user || !user.token) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to book an appointment',
+        variant: 'destructive',
+      });
+      navigate('/auth/login');
+      return;
+    }
 
-    // Navigate to appointments page after a short delay
-    setTimeout(() => {
-      navigate('/appointments');
-    }, 2000);
+    if (!selectedDate || !selectedTime) {
+      toast({
+        title: 'Error',
+        description: 'Please select a date and time',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Combine date and time into ISO string
+      const [hours, minutes] = selectedTime.split(':');
+      const dateTime = new Date(selectedDate);
+      dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const date_time = dateTime.toISOString();
+
+      const request: BookAppointmentRequestDTO = { date_time, provider_id: doctorId };
+      await bookAppointment(user.token, request);
+      setSelectedDoctor(doctorId);
+      const doctor = doctors.find((d) => d.provider_id === doctorId);
+
+      toast({
+        title: 'Appointment Booked Successfully!',
+        description: `Your appointment with ${doctor?.firstName} ${doctor?.lastName} on ${format(
+          selectedDate,
+          'MMMM dd, yyyy'
+        )} at ${selectedTime} has been confirmed.`,
+      });
+
+      // Navigate to appointments page after a short delay
+      setTimeout(() => {
+        navigate('/appointments');
+      }, 2000);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to book appointment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -99,8 +125,8 @@ const AppointmentBooking: React.FC = () => {
                 Please pick a time for your appointment
               </p>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => navigate('/appointments')}
               className="flex items-center gap-2"
             >
@@ -109,7 +135,7 @@ const AppointmentBooking: React.FC = () => {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {/* Quick Access Card */}
           <Card className="bg-muted/50">
             <CardContent className="py-4">
@@ -120,7 +146,9 @@ const AppointmentBooking: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-medium">Have existing appointments?</p>
-                    <p className="text-sm text-muted-foreground">View, reschedule or cancel your appointments</p>
+                    <p className="text-sm text-muted-foreground">
+                      View, reschedule or cancel your appointments
+                    </p>
                   </div>
                 </div>
                 <Button variant="ghost" onClick={() => navigate('/appointments')}>
@@ -139,9 +167,7 @@ const AppointmentBooking: React.FC = () => {
               <CalendarIcon className="h-5 w-5" />
               Select Date & Time
             </CardTitle>
-            <CardDescription>
-              Choose your preferred appointment date and time slot
-            </CardDescription>
+            <CardDescription>Choose your preferred appointment date and time slot</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center">
             <Calendar
@@ -151,15 +177,15 @@ const AppointmentBooking: React.FC = () => {
               disabled={(date) => date < new Date() || date < new Date('1900-01-01')}
               className="rounded-md border pointer-events-auto"
             />
-            
-            {selectedDate && (
+
+            {selectedDate && doctors.length > 0 && (
               <div className="mt-6 w-full max-w-2xl">
                 <p className="text-sm font-medium mb-3 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
                   Available time slots for {format(selectedDate, 'MMMM dd, yyyy')}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {mockDoctors[0].availableTimes.map((time) => (
+                  {doctors[0].availableTimes?.map((time) => (
                     <Button
                       key={time}
                       variant={selectedTime === time ? 'default' : 'outline'}
@@ -172,38 +198,42 @@ const AppointmentBooking: React.FC = () => {
                 </div>
               </div>
             )}
+            {selectedDate && doctors.length === 0 && !isLoading && (
+              <p className="mt-6 text-muted-foreground">No available doctors for this date.</p>
+            )}
+            {isLoading && <p className="mt-6 text-muted-foreground">Loading available doctors...</p>}
           </CardContent>
         </Card>
 
         {/* Available Doctors Section */}
-        {selectedDate && selectedTime && (
+        {selectedDate && selectedTime && doctors.length > 0 && (
           <div className="animate-fade-in">
             <h2 className="text-2xl font-bold mb-4">Available Doctors</h2>
             <p className="text-muted-foreground mb-6">
               Select a healthcare provider for your appointment
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockDoctors.map((doctor) => (
-                <Card 
-                  key={doctor.id} 
+              {doctors.map((doctor) => (
+                <Card
+                  key={doctor.provider_id}
                   className={`transition-all hover:shadow-lg ${
-                    selectedDoctor === doctor.id ? 'ring-2 ring-primary' : ''
+                    selectedDoctor === doctor.provider_id ? 'ring-2 ring-primary' : ''
                   }`}
                 >
                   <CardHeader className="text-center pb-4">
                     <div className="flex justify-center mb-4">
                       <Avatar className="h-24 w-24">
-                        <AvatarImage src={doctor.image} alt={doctor.name} />
+                        <AvatarImage src={`/placeholder.svg`} alt={`${doctor.firstName} ${doctor.lastName}`} />
                         <AvatarFallback>
-                          {doctor.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
+                          {doctor.firstName[0]}
+                          {doctor.lastName[0]}
                         </AvatarFallback>
                       </Avatar>
                     </div>
-                    <CardTitle className="text-xl">{doctor.name}</CardTitle>
+                    <CardTitle className="text-xl">
+                      {doctor.firstName} {doctor.lastName}
+                    </CardTitle>
                     <CardDescription>
                       <Badge variant="secondary" className="mt-2">
                         {doctor.specialization}
@@ -214,7 +244,7 @@ const AppointmentBooking: React.FC = () => {
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Available Times:</p>
                       <div className="flex flex-wrap gap-1">
-                        {doctor.availableTimes.slice(0, 3).map((time) => (
+                        {doctor.availableTimes?.slice(0, 3).map((time) => (
                           <Badge key={time} variant="outline" className="text-xs">
                             {time}
                           </Badge>
@@ -223,10 +253,10 @@ const AppointmentBooking: React.FC = () => {
                     </div>
                     <Button
                       className="w-full"
-                      onClick={() => handleBookAppointment(doctor.id)}
-                      disabled={selectedDoctor === doctor.id}
+                      onClick={() => handleBookAppointment(doctor.provider_id)}
+                      disabled={selectedDoctor === doctor.provider_id || isLoading}
                     >
-                      {selectedDoctor === doctor.id ? 'Appointment Booked!' : 'Book Appointment'}
+                      {selectedDoctor === doctor.provider_id ? 'Appointment Booked!' : 'Book Appointment'}
                     </Button>
                   </CardContent>
                 </Card>
