@@ -13,6 +13,8 @@ import {
   BarChart4,
   UserCog,
   Shield,
+  Bell,
+  DollarSign,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -32,9 +34,9 @@ type UserRole = 'admin' | 'provider' | 'patient';
 const navLinks = {
   common: [
     { to: "/dashboard", label: "Dashboard", icon: Home },
-    { to: "/appointments", label: "Appointments", icon: Calendar },
   ],
   provider: [
+    { to: "/appointments", label: "Appointments", icon: Calendar },
     { to: "/patients", label: "Patients", icon: Users },
     { to: "/records", label: "Medical Records", icon: ClipboardList },
   ],
@@ -44,13 +46,24 @@ const navLinks = {
     { to: "/system", label: "System Settings", icon: Settings },
   ],
   patient: [
-    { to: "/my-records", label: "My Records", icon: ClipboardList },
+    { to: "/appointments", label: "Appointments", icon: Calendar },
+    { to: "/my-records", label: "Health Records", icon: ClipboardList },
     { to: "/consent", label: "Consent Management", icon: Lock },
+    { to: "/notifications", label: "Notifications", icon: Bell },
+    { to: "/billing", label: "Billings", icon: DollarSign },
   ],
 };
 
-// Will replace with actual role-based rendering
-const userRole: UserRole = "provider"; // Temporary for layout
+// Get role from localStorage or default to patient
+const getUserRole = (): UserRole => {
+  const storedRole = localStorage.getItem("userRole");
+  if (storedRole === "admin" || storedRole === "provider" || storedRole === "patient") {
+    return storedRole as UserRole;
+  }
+  return "patient"; // Default to patient
+};
+
+const userRole: UserRole = getUserRole();
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
   const { pathname } = useLocation();

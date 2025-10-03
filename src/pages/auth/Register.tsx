@@ -80,6 +80,8 @@ const Register: React.FC = () => {
         description: "Your account has been created. Please log in.",
       });
 
+      // Set default role to patient
+      localStorage.setItem("userRole", formData.role);
       navigate("/auth/login");
     } catch (error: any) {
       toast({
@@ -93,13 +95,19 @@ const Register: React.FC = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl">Create an Account</CardTitle>
-        <CardDescription>
-          Join the Thika Integrated Health Records System
-        </CardDescription>
-      </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white font-bold text-2xl">
+              T
+            </div>
+          </div>
+          <CardTitle className="text-2xl">Create an Account</CardTitle>
+          <CardDescription>
+            Join the Thika Integrated Health Records System
+          </CardDescription>
+        </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -239,7 +247,8 @@ const Register: React.FC = () => {
           </a>
         </p>
       </CardFooter>
-    </Card>
+      </Card>
+    </div>
   );
 };
 

@@ -34,8 +34,10 @@ const Login: React.FC = () => {
     setIsLoading(true);
     try {
       await login(formData.email, formData.password);
+      // Set default role to patient (this should come from backend in production)
+      localStorage.setItem("userRole", "patient");
       toast.success("Login successful! Welcome back 👋");
-      navigate("/patient/dashboard");
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Login failed:", error);
       toast.error(error?.message || "Invalid credentials.");
@@ -45,13 +47,19 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl">Log in</CardTitle>
-        <CardDescription>
-          Access your Thika Integrated Health Records account
-        </CardDescription>
-      </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white font-bold text-2xl">
+              T
+            </div>
+          </div>
+          <CardTitle className="text-2xl">Welcome Back</CardTitle>
+          <CardDescription>
+            Sign in to access your Thika Health Records
+          </CardDescription>
+        </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -105,7 +113,8 @@ const Login: React.FC = () => {
           </a>
         </p>
       </CardFooter>
-    </Card>
+      </Card>
+    </div>
   );
 };
 
