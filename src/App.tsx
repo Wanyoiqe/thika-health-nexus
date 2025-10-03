@@ -7,8 +7,10 @@ import ProviderDashboard from './components/dashboard/provider';
 import AdminDashboard from './components/dashboard/Admin';
 import Register from './pages/auth/Register';
 import AppointmentBooking from './pages/AppointmentBooking';
+import Appointments from './pages/Appointments';
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
+import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 
 const App: React.FC = () => {
   return (
@@ -41,13 +43,15 @@ const App: React.FC = () => {
           },
         }}
       />
+      <ShadcnToaster />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/patient/dashboard" element={<PatientDashboard />} />
         <Route path="/dashboard" element={<PatientDashboard />} />
-        <Route path="/appointments" element={<AppointmentBooking />} />
+        <Route path="/appointments/book" element={<AppointmentBooking />} />
+        <Route path="/appointments" element={<Appointments />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>

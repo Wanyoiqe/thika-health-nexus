@@ -5,8 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MainLayout from '@/components/layout/MainLayout';
-import { Clock, Calendar as CalendarIcon } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon, ChevronRight, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 // Mock doctor data
 const mockDoctors = [
@@ -55,6 +57,7 @@ const mockDoctors = [
 ];
 
 const AppointmentBooking: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
@@ -71,19 +74,62 @@ const AppointmentBooking: React.FC = () => {
 
   const handleBookAppointment = (doctorId: number) => {
     setSelectedDoctor(doctorId);
-    // In production, this would make an API call to book the appointment
-    console.log('Booking appointment:', { doctorId, date: selectedDate, time: selectedTime });
+    const doctor = mockDoctors.find(d => d.id === doctorId);
+    
+    toast({
+      title: "Appointment Booked Successfully!",
+      description: `Your appointment with ${doctor?.name} on ${format(selectedDate!, 'MMMM dd, yyyy')} at ${selectedTime} has been confirmed.`,
+    });
+
+    // Navigate to appointments page after a short delay
+    setTimeout(() => {
+      navigate('/appointments');
+    }, 2000);
   };
 
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Book Your Appointment</h1>
-          <p className="text-muted-foreground text-lg">
-            Please pick a time for your appointment
-          </p>
+        {/* Header with View Appointments Button */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="text-center sm:text-left">
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">Book Your Appointment</h1>
+              <p className="text-muted-foreground text-lg">
+                Please pick a time for your appointment
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/appointments')}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              View My Appointments
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Quick Access Card */}
+          <Card className="bg-muted/50">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Have existing appointments?</p>
+                    <p className="text-sm text-muted-foreground">View, reschedule or cancel your appointments</p>
+                  </div>
+                </div>
+                <Button variant="ghost" onClick={() => navigate('/appointments')}>
+                  View All
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Calendar Section */}
