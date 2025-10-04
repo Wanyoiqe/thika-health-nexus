@@ -15,7 +15,7 @@ import { BookAppointmentRequestDTO, Provider } from '@/types';
 
 const AppointmentBooking: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshToken } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
@@ -34,7 +34,8 @@ const AppointmentBooking: React.FC = () => {
   const fetchAvailableDoctors = async (data: { from: string; to: string }) => {
     setIsLoading(true);
     try {
-      const response = await getAvailableDoctors(data);
+      const response = await getAvailableDoctors(data.from, data.to);
+      console.log('Available Doctors:', response);
       setDoctors(response.available);
     } catch (error: any) {
       toast({
@@ -58,7 +59,10 @@ const AppointmentBooking: React.FC = () => {
   };
 
   const handleBookAppointment = async (doctorId: string) => {
-    if (!user || !user.token) {
+    console.log('Booking appointment with doctor ID:', doctorId);
+    console.log('User:', user);
+    console.log('Refresh Token:', refreshToken);
+    if (!user || !refreshToken) {
       toast({
         title: 'Error',
         description: 'You must be logged in to book an appointment',
@@ -86,7 +90,7 @@ const AppointmentBooking: React.FC = () => {
       const date_time = dateTime.toISOString();
 
       const request: BookAppointmentRequestDTO = { date_time, provider_id: doctorId };
-      await bookAppointment(user.token, request);
+      await bookAppointment(refreshToken, request.date_time, request.provider_id);
       setSelectedDoctor(doctorId);
       const doctor = doctors.find((d) => d.provider_id === doctorId);
 

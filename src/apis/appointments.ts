@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { getAllAppointmentsDTO } from "../types";
+import type { BookAppointmentResponseDTO, getAllAppointmentsDTO, GetAvailableDoctorsResponseDTO, GetPastAppointmentsResponseDTO, GetUpcomingAppointmentsResponseDTO } from "../types";
 
 const API_URL = "http://localhost:5000"; // Replace with your backend URL
 
@@ -31,7 +31,7 @@ export const bookAppointment = async (
   provider_id: string | null
 ) => {
   try {
-    const response = await privateAPIUtil(token).post('/api/appointments/book', { date_time, provider_id });
+    const response = await privateAPIUtil(token).post<BookAppointmentResponseDTO>('/api/appointments/book', { date_time, provider_id });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Booking appointment failed');
@@ -51,7 +51,7 @@ export const getAllAppointments = async (token: string) => {
 // Get past appointments
 export const getPastAppointments = async (token: string) => {
   try {
-    const response = await privateAPIUtil(token).get(`/api/appointments/past`);
+    const response = await privateAPIUtil(token).get<GetPastAppointmentsResponseDTO>(`/api/appointments/past`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch past appointments');
@@ -61,7 +61,7 @@ export const getPastAppointments = async (token: string) => {
 // Get upcoming appointments
 export const getUpcomingAppointments = async (token: string) => {
   try {
-    const response = await privateAPIUtil(token).get(`/api/appointments/upcoming`);
+    const response = await privateAPIUtil(token).get<GetUpcomingAppointmentsResponseDTO>(`/api/appointments/upcoming`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch upcoming appointments');
@@ -71,7 +71,7 @@ export const getUpcomingAppointments = async (token: string) => {
 // Get available doctors for a time window
 export const getAvailableDoctors = async (from: string, to: string) => {
   try {
-    const response = await publicAPIUtil().post('/api/appointments/available', { from, to });
+    const response = await publicAPIUtil().post<GetAvailableDoctorsResponseDTO>('/api/appointments/available', { from, to });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch available doctors');

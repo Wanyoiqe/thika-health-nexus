@@ -17,9 +17,13 @@ export type Appointment = {
   patient_id: string;
   provider_id: string | null;
   provider?: {
+    provider_id: string;
     firstName: string;
     lastName: string;
     specialization: string;
+    phone?: string | null;
+    profileUrl?: string | null;
+    hospital_id?: string | null;
   };
   status: 'scheduled' | 'completed' | 'cancelled';
 };
@@ -29,7 +33,10 @@ export type Provider = {
   firstName: string;
   lastName: string;
   specialization: string;
-  availableTimes?: string[]; // Optional, as backend may not provide this
+  availableTimes?: string[]; // Optional for general provider objects; availability endpoint will populate this
+  phone?: string | null;
+  profileUrl?: string | null;
+  hospital_id?: string | null;
 };
 
 // DTO for /api/appointments/book

@@ -26,13 +26,13 @@ interface Appointment {
 }
 
 const PatientDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshToken } = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (user && user.token) {
+    if (user && refreshToken) {
       fetchUpcomingAppointments();
     }
   }, [user]);
@@ -40,8 +40,8 @@ const PatientDashboard: React.FC = () => {
   const fetchUpcomingAppointments = async () => {
     setIsLoading(true);
     try {
-      const response = await getUpcomingAppointments(user!.token);
-      // Assuming API returns { result_code: 1, appointments: [{ app_id, date_time, provider_id, provider: { firstName, lastName, specialization }, status }] }
+      const response = await getUpcomingAppointments(refreshToken);
+      console.log('Upcoming Appointments:', response);
       setAppointments(response.appointments);
     } catch (error: any) {
       toast({
