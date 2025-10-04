@@ -41,7 +41,7 @@ export const bookAppointment = async (
 // Get all appointments
 export const getAllAppointments = async (token: string) => {
   try {
-    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>(`/api/appointments`);
+    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>(`/api/appointments/all`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch appointments');
