@@ -40,7 +40,7 @@ export const register = async (formData: {
   email: string;
   phone: string;
   password: string;
-  role: 'patient' | 'provider';
+  role: string;
 }) => {
     try {
         const response = await publicAPIUtil().post('/api/users/register', formData);

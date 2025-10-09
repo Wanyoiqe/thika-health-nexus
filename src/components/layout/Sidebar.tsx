@@ -47,7 +47,7 @@ const navLinks = {
   ],
   patient: [
     { to: "/appointments", label: "Appointments", icon: Calendar },
-    { to: "/my-records", label: "Health Records", icon: ClipboardList },
+    { to: "/health-records", label: "Health Records", icon: ClipboardList },
     { to: "/consent", label: "Consent Management", icon: Lock },
     { to: "/notifications", label: "Notifications", icon: Bell },
     { to: "/billing", label: "Billings", icon: DollarSign },

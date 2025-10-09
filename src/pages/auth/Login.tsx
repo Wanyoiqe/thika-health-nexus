@@ -15,26 +15,45 @@ import { Lock, Mail } from "lucide-react";
 import { useAuth } from "@/AuthContext";
 import { toast } from "react-hot-toast";
 
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useForm } from "react-hook-form";
+
 const Login: React.FC = () => {
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [formData, setFormData] = React.useState({
-    email: "",
-    password: "",
-  });
   const navigate = useNavigate();
   const { loginUtil } = useAuth();
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // ✅ Yup validation schema
+  const schema = yup.object().shape({
+    email: yup
+      .string()
+      .email("Please enter a valid email address")
+      .required("Email is required"),
+    password: yup
+      .string()
+      .min(6, "Password must be at least 6 characters")
+      .required("Password is required"),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ✅ Include mode and defaultValues for proper validation tracking
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm({
+    resolver: yupResolver(schema),
+    mode: "onChange", // 🟢 validate on each change
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: { email: string; password: string }) => {
     setIsLoading(true);
     try {
-      await loginUtil(formData.email, formData.password);
-      // Set default role to patient (this should come from backend in production)
+      await loginUtil(data.email, data.password);
       localStorage.setItem("userRole", "patient");
       toast.success("Login successful! Welcome back 👋");
       navigate("/dashboard");
@@ -60,59 +79,72 @@ const Login: React.FC = () => {
             Sign in to access your Thika Health Records
           </CardDescription>
         </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                className="pl-9"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                className="pl-9"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  className="pl-9"
+                  {...register("email")}
+                />
+              </div>
+              {errors.email && (
+                <p className="text-red-500 text-xs">{errors.email.message}</p>
+              )}
             </div>
-          </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Log in"}
-          </Button>
-          <div className="text-xs text-gray-500 mt-2">
-            <div>Demo credentials:</div>
-            <div>Patient: patient@health.com / password</div>
-            <div>Provider: provider@health.com / password</div>
-          </div>
-        </form>
-      </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-gray-600">
-          Don’t have an account?{" "}
-          <a href="/auth/register" className="text-primary font-medium hover:underline">
-            Sign up
-          </a>
-        </p>
-      </CardFooter>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input
+                  id="password"
+                  type="password"
+                  className="pl-9"
+                  {...register("password")}
+                />
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-xs">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            {/* ✅ Disable button when invalid or loading */}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!isValid || isLoading}
+            >
+              {isLoading ? "Logging in..." : "Log in"}
+            </Button>
+
+            <div className="text-xs text-gray-500 mt-2">
+              <div>Demo credentials:</div>
+              <div>Patient: patient@health.com / password</div>
+              <div>Provider: provider@health.com / password</div>
+            </div>
+          </form>
+        </CardContent>
+
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-gray-600">
+            Don’t have an account?{" "}
+            <a
+              href="/auth/register"
+              className="text-primary font-medium hover:underline"
+            >
+              Sign up
+            </a>
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );

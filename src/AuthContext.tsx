@@ -22,7 +22,7 @@ export type AuthContextType = {
     email: string;
     phone: string;
     password: string;
-    role: 'patient' | 'provider';
+    role: string;
   }) => Promise<void>;
   loginUtil: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string;
     phone: string;
     password: string;
-    role: 'patient' | 'provider';
+    role: string;
   }) => {
     try {
       const response = await register(formData);
