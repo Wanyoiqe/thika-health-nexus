@@ -4,11 +4,13 @@ import { Routes, Route } from 'react-router-dom';
 import Login from './pages/auth/Login';
 import PatientDashboard from './pages/PatientDashboard';
 import ProviderDashboard from './components/dashboard/provider';
-import AdminDashboard from './components/dashboard/Admin';
 import Register from './pages/auth/Register';
 import AppointmentBooking from './pages/AppointmentBooking';
 import Appointments from './pages/Appointments';
 import HealthRecordsPage from './pages/HealthRecordsPage';
+import ReceptionistDashboard from './pages/ReceptionistDashboard';
+import DoctorDashboard from './pages/DoctorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -55,6 +57,8 @@ const App: React.FC = () => {
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/health-records" element={<HealthRecordsPage />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+        <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+        <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
     </AuthProvider>
