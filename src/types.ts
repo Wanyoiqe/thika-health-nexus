@@ -39,6 +39,21 @@ export type Provider = {
   hospital_id?: string | null;
 };
 
+// DTO for /api/doctors
+export interface Doctor {
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  specialization: string;
+  phone_number: string;
+  gender: string;
+  profile_url: string | null;
+  hospital_id: string | null;
+}
+
+
 // DTO for /api/appointments/book
 export type BookAppointmentRequestDTO = {
   date_time: string;
@@ -78,4 +93,10 @@ export type GetPastAppointmentsResponseDTO = {
 export type GetAllAppointmentsResponseDTO = {
   result_code: number;
   appointments: Appointment[];
+};
+
+// DTO for /api/appointments
+export type GetAllDoctorsResponseDTO = {
+  result_code: number;
+  doctors: Doctor[];
 };

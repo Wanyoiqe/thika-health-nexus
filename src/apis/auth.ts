@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { LoginResponse } from '../types';  
+import type { GetAllDoctorsResponseDTO, LoginResponse } from '../types';  
 
 const API_URL = 'http://localhost:5000' // Replace with your backend URL
 
@@ -58,3 +58,13 @@ export const fetchUserProfile = async (token: string) => {
         throw new Error(error.response?.data?.message || 'Failed to fetch user profile');
     }
 }
+
+// Get all doctors for a time window
+export const fetchAllDoctors = async (token: string) => {
+  try {
+    const response = await privateAPIUtil(token).post<GetAllDoctorsResponseDTO>('/api/users/fetch_all_doctors');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch available doctors');
+  }
+};
