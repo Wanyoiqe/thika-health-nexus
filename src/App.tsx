@@ -15,7 +15,6 @@ import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
-import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 import NotFound from "./pages/NotFound";
 
 const App: React.FC = () => {
@@ -66,7 +65,6 @@ const App: React.FC = () => {
         <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
         <Route path="/receptionist/doctor-management" element={<DoctorManagement/>} />
 
-        {/* ✅ CATCH-ALL ROUTE */}
         <Route path="*" element={<NotFound />} />
 
       </Routes>
