@@ -24,7 +24,7 @@ export type AuthContextType = {
     password: string;
     role: string;
   }) => Promise<void>;
-  loginUtil: (email: string, password: string) => Promise<void>;
+  loginUtil: (email: string, password: string) => Promise<LoginResponse>;
   logout: () => void;
 };
 
@@ -74,14 +74,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
 
-  const loginUtil = async (email: string, password: string) => {
-    const response = await login(email, password);
-    console.log("Login response:", response);
-    setUser(response.user);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    setRefreshToken(response.token);
-    Cookies.set('refreshToken', response.token, { expires: 7 });
-  };
+const loginUtil = async (email: string, password: string): Promise<LoginResponse> => {
+  const response = await login(email, password);
+  console.log("Login response:", response);
+  setUser(response.user);
+  localStorage.setItem('user', JSON.stringify(response.user));
+  setRefreshToken(response.token);
+  Cookies.set('refreshToken', response.token, { expires: 7 });
+
+  // ✅ Return response so login.tsx can access it
+  return response;
+};
+
+
 
   const logout = () => {
     setUser(null);
@@ -98,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider'); 
   }
   return context;
 };

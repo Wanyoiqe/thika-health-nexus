@@ -16,6 +16,7 @@ import {
   Bell,
   DollarSign,
 } from "lucide-react";
+import { useAuth } from "@/AuthContext";
 
 interface SidebarProps {
   open: boolean;
@@ -27,21 +28,32 @@ interface SidebarLinkProps {
   children: React.ReactNode;
 }
 
-// Define a type for the user roles to make TypeScript aware of the possible values
-type UserRole = 'admin' | 'provider' | 'patient';
-
 // Navigation links based on user roles - we'll expand this later
+const getDashboardLink = (role?: string) => {
+  switch (role) {
+    case "admin":
+      return "/admin/dashboard";
+    case "receptionist":
+      return "/receptionist/dashboard";
+    case "patient":
+      return "/patient/dashboard";
+    default:
+      return "/dashboard";
+  }
+};
+
 const navLinks = {
   common: [
-    { to: "/dashboard", label: "Dashboard", icon: Home },
+    { to: "/dashboard", 
+      label: "Dashboard", 
+      icon: Home 
+    },
   ],
-  provider: [
-    { to: "/appointments", label: "Appointments", icon: Calendar },
-    { to: "/patients", label: "Patients", icon: Users },
-    { to: "/records", label: "Medical Records", icon: ClipboardList },
+  receptionist: [
+    { to: "/receptionist/doctor-management", label: "Doctor Management", icon: Users },
   ],
   admin: [
-    { to: "/users", label: "User Management", icon: UserCog },
+    { to: "/users", label: "Hospital Management", icon: UserCog },
     { to: "/analytics", label: "Analytics", icon: BarChart4 }, 
     { to: "/system", label: "System Settings", icon: Settings },
   ],
@@ -53,17 +65,6 @@ const navLinks = {
     { to: "/billing", label: "Billings", icon: DollarSign },
   ],
 };
-
-// Get role from localStorage or default to patient
-const getUserRole = (): UserRole => {
-  const storedRole = localStorage.getItem("userRole");
-  if (storedRole === "admin" || storedRole === "provider" || storedRole === "patient") {
-    return storedRole as UserRole;
-  }
-  return "patient"; // Default to patient
-};
-
-const userRole: UserRole = getUserRole();
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
   const { pathname } = useLocation();
@@ -85,14 +86,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) =
 
 const Sidebar: React.FC<SidebarProps> = ({ open }) => {
   const location = useLocation();
-  
-  // Determine which links to show based on role
-  const roleLinks = userRole === 'admin' 
-    ? [...navLinks.common, ...navLinks.provider, ...navLinks.admin]
-    : userRole === 'provider' 
-      ? [...navLinks.common, ...navLinks.provider]
-      : [...navLinks.common, ...navLinks.patient];
-
+  const { user, refreshToken } = useAuth();
   if (!open) {
     return null;
   }
@@ -120,23 +114,20 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               General
             </p>
-            {navLinks.common.map((link) => (
-              <SidebarLink 
-                key={link.to} 
-                to={link.to} 
-                icon={link.icon}
-              >
-                {link.label}
-              </SidebarLink>
-            ))}
+           <SidebarLink 
+              to={getDashboardLink(user?.role)} 
+              icon={Home}
+            >
+              Dashboard
+            </SidebarLink>
           </div>
           
-          {userRole !== 'patient' && (
+          {user?.role === 'receptionist' && (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Clinical
               </p>
-              {navLinks.provider.map((link) => (
+              {navLinks.receptionist.map((link) => (
                 <SidebarLink 
                   key={link.to} 
                   to={link.to} 
@@ -148,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
             </div>
           )}
           
-          {userRole === 'patient' && (
+          {user?.role === 'patient' && (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 My Health
@@ -165,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
             </div>
           )}
           
-          {userRole === 'admin' && (
+          {user?.role === 'admin' && (
             <div className="space-y-1">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Administration

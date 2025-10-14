@@ -7,11 +7,14 @@ import ProviderDashboard from './components/dashboard/provider';
 import AdminDashboard from './components/dashboard/Admin';
 import Register from './pages/auth/Register';
 import AppointmentBooking from './pages/AppointmentBooking';
+import DoctorManagement from './pages/DoctorManagement';
 import Appointments from './pages/Appointments';
 import HealthRecordsPage from './pages/HealthRecordsPage';
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
+import ReceptionistDashboard from "./pages/ReceptionistDashboard";
+import NotFound from "./pages/NotFound";
 
 const App: React.FC = () => {
   return (
@@ -56,6 +59,12 @@ const App: React.FC = () => {
         <Route path="/health-records" element={<HealthRecordsPage />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+        <Route path="/receptionist/doctor-management" element={<DoctorManagement/>} />
+
+        {/* ✅ CATCH-ALL ROUTE */}
+        <Route path="*" element={<NotFound />} />
+
       </Routes>
     </AuthProvider>
   );

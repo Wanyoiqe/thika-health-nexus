@@ -51,19 +51,46 @@ const Login: React.FC = () => {
   });
 
   const onSubmit = async (data: { email: string; password: string }) => {
-    setIsLoading(true);
-    try {
-      await loginUtil(data.email, data.password);
-      localStorage.setItem("userRole", "patient");
-      toast.success("Login successful! Welcome back 👋");
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Login failed:", error);
-      toast.error(error?.message || "Invalid credentials.");
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    const response = await loginUtil(data.email, data.password); // returns full response
+    const role = response?.user?.role?.toLowerCase();
+
+    if (!role) {
+      throw new Error("User role not found. Please contact support.");
     }
-  };
+
+    console.log("Login successful, user role:", role);
+
+    toast.success("Login successful! Welcome back 👋");
+
+    // ✅ Redirect based on role
+    switch (role) {
+      case "patient":
+        navigate("/patient/dashboard");
+        break;
+      case "doctor":
+        navigate("/doctor/dashboard");
+        break;
+      case "receptionist":
+        navigate("/receptionist/dashboard");
+        break;
+      case "admin":
+        navigate("/admin/dashboard");
+        break;
+      default:
+        navigate("/"); // fallback
+        break;
+    }
+  } catch (error: any) {
+    console.error("Login failed:", error);
+    toast.error(error?.message || "Invalid credentials.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-secondary flex items-center justify-center p-4">
