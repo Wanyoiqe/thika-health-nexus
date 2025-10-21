@@ -100,3 +100,10 @@ export type GetAllDoctorsResponseDTO = {
   result_code: number;
   doctors: Doctor[];
 };
+
+// DTO for /api/addDoctor
+export type AddDoctorRequestDTO = {
+  result_code: number;
+  message: string;
+  user: User;
+}

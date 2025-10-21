@@ -6,7 +6,6 @@ import PatientDashboard from './pages/PatientDashboard';
 import ProviderDashboard from './components/dashboard/provider';
 import Register from './pages/auth/Register';
 import AppointmentBooking from './pages/AppointmentBooking';
-import DoctorManagement from './pages/DoctorManagement';
 import Appointments from './pages/Appointments';
 import HealthRecordsPage from './pages/HealthRecordsPage';
 import ReceptionistDashboard from './pages/ReceptionistDashboard';
@@ -16,6 +15,7 @@ import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
 import NotFound from "./pages/NotFound";
+import DoctorManagement from "./pages/DoctorManagement";
 
 const App: React.FC = () => {
   return (
