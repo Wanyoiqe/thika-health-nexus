@@ -11,6 +11,11 @@ import HealthRecordsPage from './pages/HealthRecordsPage';
 import ReceptionistDashboard from './pages/ReceptionistDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import DoctorPatients from './pages/doctor/DoctorPatients';
+import DoctorAppointments from './pages/doctor/DoctorAppointments';
+import DoctorHealthRecords from './pages/doctor/DoctorHealthRecords';
+import DoctorConsent from './pages/doctor/DoctorConsent';
+import DoctorNotifications from './pages/doctor/DoctorNotifications';
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -60,10 +65,14 @@ const App: React.FC = () => {
         <Route path="/health-records" element={<HealthRecordsPage />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
         <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
-        <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
         <Route path="/receptionist/doctor-management" element={<DoctorManagement/>} />
+        <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
+        <Route path="/doctor/patients" element={<DoctorPatients />} />
+        <Route path="/doctor/appointments" element={<DoctorAppointments />} />
+        <Route path="/doctor/health-records" element={<DoctorHealthRecords />} />
+        <Route path="/doctor/consent" element={<DoctorConsent />} />
+        <Route path="/doctor/notifications" element={<DoctorNotifications />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         <Route path="*" element={<NotFound />} />
 

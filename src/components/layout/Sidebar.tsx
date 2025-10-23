@@ -64,6 +64,13 @@ const navLinks = {
     { to: "/notifications", label: "Notifications", icon: Bell },
     { to: "/billing", label: "Billings", icon: DollarSign },
   ],
+  provider: [
+    { to: "/doctor/patients", label: "My Patients", icon: Users },
+    { to: "/doctor/appointments", label: "Appointments", icon: Calendar },
+    { to: "/doctor/health-records", label: "Health Records", icon: ClipboardList },
+    { to: "/doctor/consent", label: "Consent Requests", icon: Lock },
+    { to: "/doctor/notifications", label: "Notifications", icon: Bell },
+  ],
 };
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
@@ -145,6 +152,23 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
                 My Health
               </p>
               {navLinks.patient.map((link) => (
+                <SidebarLink 
+                  key={link.to} 
+                  to={link.to} 
+                  icon={link.icon}
+                >
+                  {link.label}
+                </SidebarLink>
+              ))}
+            </div>
+          )}
+          
+          {user?.role === 'provider' && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Clinical
+              </p>
+              {navLinks.provider.map((link) => (
                 <SidebarLink 
                   key={link.to} 
                   to={link.to} 
