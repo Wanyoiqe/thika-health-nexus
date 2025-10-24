@@ -4,12 +4,12 @@ import { register, login, fetchUserProfile } from './apis/auth';
 import type { LoginResponse } from './types';
 
 export type User = {
-  id: number;
+  id: string;  // Updated to string for UUID
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  role: 'patient' | 'provider' | 'receptionist' | 'admin';
+  role: 'patient' | 'doctor' | 'provider' | 'receptionist' | 'admin';  // Added 'doctor'
 };
 
 export type AuthContextType = {
@@ -34,10 +34,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [refreshToken, setRefreshToken] = useState<string>('');
 
+  // Helper to transform backend/snake_case data to User shape
+  const transformToUser = (data: any): User | null => {
+    if (!data || typeof data !== 'object') return null;
+
+    // Map role: treat 'doctor' as 'provider' for frontend logic
+    const role = data.role === 'doctor' ? 'provider' : data.role;
+
+    return {
+      id: data.user_id || data.id,
+      firstName: data.first_name || data.firstName || '',
+      lastName: data.last_name || data.lastName || '',
+      email: data.email || '',
+      phone: data.phone_number || data.phone || '',
+      role: role as User['role'],
+    };
+  };
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsed = JSON.parse(storedUser);
+        const transformedUser = transformToUser(parsed);
+        if (transformedUser) {
+          setUser(transformedUser);
+        } else {
+          console.warn('Invalid stored user data, clearing localStorage');
+          localStorage.removeItem('user');
+        }
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
@@ -45,11 +74,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (!refreshToken) return;
       const data = await fetchUserProfile(refreshToken);
-      console.log("Fetched user profile:", data); // for debugging
-      // setUser(data.user);
-      // localStorage.setItem('user', JSON.stringify(data.user));
+      console.log('Fetched user profile:', data); // for debugging
+      if (data && typeof data === 'object' && 'user' in data) {
+        const transformedUser = transformToUser((data as { user: any }).user);
+        if (transformedUser) {
+          setUser(transformedUser);
+          localStorage.setItem('user', JSON.stringify(transformedUser));  // Store transformed version
+        } else {
+          console.warn('fetchUserProfile returned invalid user data');
+        }
+      } else {
+        console.warn('fetchUserProfile returned unexpected data shape', data);
+      }
     } catch (error) {
       console.error('Failed to refresh user:', error);
+      // Optionally logout on refresh failure
+      logout();
     }
   };
 
@@ -63,38 +103,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }) => {
     try {
       const response = await register(formData);
-      console.log("Registration response:", response); // for debugging
-      // Optionally set user state if registration logs in the user
-      // setUser(response.user);
-      // localStorage.setItem('user', JSON.stringify(response.user));
+      console.log('Registration response:', response); // for debugging
+      // If registration auto-returns/transforms a user, set it here
+      // if (response.user) {
+      //   const transformedUser = transformToUser(response.user);
+      //   if (transformedUser) {
+      //     setUser(transformedUser);
+      //     localStorage.setItem('user', JSON.stringify(transformedUser));
+      //   }
+      // }
     } catch (error: any) {
       throw new Error(error.message || 'Registration failed');
     }
   };
 
-
-
-const loginUtil = async (email: string, password: string): Promise<LoginResponse> => {
-  const response = await login(email, password);
-  console.log("Login response:", response);
-  setUser(response.user);
-  localStorage.setItem('user', JSON.stringify(response.user));
-  setRefreshToken(response.token);
-  Cookies.set('refreshToken', response.token, { expires: 7 });
-
-  // ✅ Return response so login.tsx can access it
-  return response;
-};
-
-
+  const loginUtil = async (email: string, password: string): Promise<LoginResponse> => {
+    const response = await login(email, password);
+    console.log('Login response:', response);
+    const transformedUser = transformToUser(response.user);
+    if (transformedUser) {
+      setUser(transformedUser);
+      localStorage.setItem('user', JSON.stringify(transformedUser));  // Store transformed
+    }
+    setRefreshToken(response.token);
+    Cookies.set('refreshToken', response.token, { expires: 7 });
+    return response;
+  };
 
   const logout = () => {
     setUser(null);
+    setRefreshToken('');
     localStorage.removeItem('user');
+    Cookies.remove('refreshToken');
   };
 
   return (
-    <AuthContext.Provider value={{ user,refreshToken, refreshUser, registerPatient, loginUtil, logout }}>
+    <AuthContext.Provider value={{ user, refreshToken, refreshUser, registerPatient, loginUtil, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -103,7 +147,7 @@ const loginUtil = async (email: string, password: string): Promise<LoginResponse
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider'); 
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

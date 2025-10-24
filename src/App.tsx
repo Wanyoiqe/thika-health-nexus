@@ -2,6 +2,7 @@
 import Index from "./pages/Index";
 import { Routes, Route } from 'react-router-dom';
 import Login from './pages/auth/Login';
+import ConsentManagement from './components/dashboard/ConsentManagement';
 import PatientDashboard from './pages/PatientDashboard';
 import ProviderDashboard from './components/dashboard/provider';
 import Register from './pages/auth/Register';
@@ -63,6 +64,7 @@ const App: React.FC = () => {
         <Route path="/appointments/book" element={<AppointmentBooking />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/health-records" element={<HealthRecordsPage />} />
+        <Route path="/consent" element={<ConsentManagement />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
         <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
         <Route path="/receptionist/doctor-management" element={<DoctorManagement/>} />

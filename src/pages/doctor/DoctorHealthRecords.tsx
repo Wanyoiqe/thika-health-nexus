@@ -14,13 +14,13 @@ const DoctorHealthRecords: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState('');
   const [recordType, setRecordType] = useState('');
 
-  // Medical History Form State
-  const [medicalHistory, setMedicalHistory] = useState({
-    diagnosis: '',
-    symptoms: '',
-    treatment: '',
-    notes: '',
-  });
+  // // Medical History Form State
+  // const [medicalHistory, setMedicalHistory] = useState({
+  //   diagnosis: '',
+  //   symptoms: '',
+  //   treatment: '',
+  //   notes: '',
+  // });
 
   // Lab Results Form State
   const [labResults, setLabResults] = useState({
@@ -48,14 +48,14 @@ const DoctorHealthRecords: React.FC = () => {
     height: '',
   });
 
-  const handleSubmitMedicalHistory = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: 'Success',
-      description: 'Medical history record added successfully',
-    });
-    setMedicalHistory({ diagnosis: '', symptoms: '', treatment: '', notes: '' });
-  };
+  // const handleSubmitMedicalHistory = (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   toast({
+  //     title: 'Success',
+  //     description: 'Medical history record added successfully',
+  //   });
+  //   setMedicalHistory({ diagnosis: '', symptoms: '', treatment: '', notes: '' });
+  // };
 
   const handleSubmitLabResults = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,13 +116,12 @@ const DoctorHealthRecords: React.FC = () => {
         {selectedPatient && (
           <Tabs defaultValue="medical-history" className="w-full">
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-              <TabsTrigger value="medical-history">Medical History</TabsTrigger>
               <TabsTrigger value="lab-results">Lab Results</TabsTrigger>
               <TabsTrigger value="medications">Medications</TabsTrigger>
               <TabsTrigger value="vitals">Vitals</TabsTrigger>
             </TabsList>
 
-            {/* Medical History Tab */}
+            {/* Medical History Tab
             <TabsContent value="medical-history">
               <Card>
                 <CardHeader>
@@ -180,7 +179,7 @@ const DoctorHealthRecords: React.FC = () => {
                   </form>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </TabsContent> */}
 
             {/* Lab Results Tab */}
             <TabsContent value="lab-results">

@@ -261,7 +261,7 @@ const DoctorDashboard: React.FC = () => {
                   </CardTitle>
                   <CardDescription>Pending and recent consents</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/doctor/consent')}>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/doctor/consent-management')}>
                   View All
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
@@ -315,7 +315,7 @@ const DoctorDashboard: React.FC = () => {
                 <FileText className="h-4 w-4" />
                 Add Health Record
               </Button>
-              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate('/doctor/consent')}>
+              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => navigate('/doctor/consent-management')}>
                 <Plus className="h-4 w-4" />
                 Request Patient Consent
               </Button>

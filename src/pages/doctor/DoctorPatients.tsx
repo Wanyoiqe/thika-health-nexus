@@ -7,62 +7,77 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search, User, Phone, Mail, Calendar, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchDoctorsPatients,  } from '@/apis/doctor';
+import { Patient } from '@/types';
+import { useAuth } from '@/AuthContext';
 
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  age: number;
-  gender: string;
-  phone: string;
-  email: string;
-  lastVisit?: string;
-  totalVisits: number;
-}
 
-const DoctorPatients: React.FC = () => {
+export const DoctorPatients: React.FC = () => {
   const navigate = useNavigate();
+  const { user, refreshToken } = useAuth();
+  // const refresh
   const [searchQuery, setSearchQuery] = useState('');
-  const [patients, setPatients] = useState<Patient[]>([
-    {
-      id: '1',
-      firstName: 'John',
-      lastName: 'Doe',
-      age: 45,
-      gender: 'Male',
-      phone: '+254 712 345 678',
-      email: 'john.doe@email.com',
-      lastVisit: '2025-10-20',
-      totalVisits: 12
-    },
-    {
-      id: '2',
-      firstName: 'Jane',
-      lastName: 'Smith',
-      age: 32,
-      gender: 'Female',
-      phone: '+254 723 456 789',
-      email: 'jane.smith@email.com',
-      lastVisit: '2025-10-21',
-      totalVisits: 8
-    },
-    {
-      id: '3',
-      firstName: 'Michael',
-      lastName: 'Johnson',
-      age: 28,
-      gender: 'Male',
-      phone: '+254 734 567 890',
-      email: 'michael.j@email.com',
-      lastVisit: '2025-10-19',
-      totalVisits: 5
-    },
-  ]);
+  // const [patients, setPatients] = useState<Patient[]>([
+  //   {
+  //     id: '1',
+  //     firstName: 'John',
+  //     lastName: 'Doe',
+  //     age: 45,
+  //     gender: 'Male',
+  //     phone: '+254 712 345 678',
+  //     email: 'john.doe@email.com',
+  //     lastVisit: '2025-10-20',
+  //     totalVisits: 12
+  //   },
+  //   {
+  //     id: '2',
+  //     firstName: 'Jane',
+  //     lastName: 'Smith',
+  //     age: 32,
+  //     gender: 'Female',
+  //     phone: '+254 723 456 789',
+  //     email: 'jane.smith@email.com',
+  //     lastVisit: '2025-10-21',
+  //     totalVisits: 8
+  //   },
+  //   {
+  //     id: '3',
+  //     firstName: 'Michael',
+  //     lastName: 'Johnson',
+  //     age: 28,
+  //     gender: 'Male',
+  //     phone: '+254 734 567 890',
+  //     email: 'michael.j@email.com',
+  //     lastVisit: '2025-10-19',
+  //     totalVisits: 5
+  //   },
+  // ]);
+  const [patients, setPatients] = useState<Patient[]>([]);
 
+  useEffect(() => {
+    if (!refreshToken) return;
+    const loadPatients = async () => {
+        try {
+          const data = await fetchDoctorsPatients(refreshToken);
+          console.log('Fetched patients:', data.patients);
+          setPatients(data.patients);
+        }
+        catch (error) {
+          console.error('Error fetching patients:', error);
+        }
+      };
+
+      loadPatients();
+    }
+  , []);
+
+  // const filteredPatients = patients.filter(patient =>
+  //   ${patient.full_name}.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   patient.phone.includes(searchQuery)
+  // );
   const filteredPatients = patients.filter(patient =>
-    `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.phone.includes(searchQuery)
+    `${patient.full_name}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -93,26 +108,26 @@ const DoctorPatients: React.FC = () => {
         {/* Patients Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPatients.map((patient) => (
-            <Card key={patient.id} className="hover:shadow-lg transition-shadow">
+            <Card key={patient.patient_id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start gap-4">
                   <Avatar className="h-16 w-16">
                     <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                      {patient.firstName[0]}{patient.lastName[0]}
+                      {patient.full_name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-xl">
-                      {patient.firstName} {patient.lastName}
+                      {patient.full_name}
                     </CardTitle>
-                    <CardDescription>
+                    {/* <CardDescription>
                       {patient.age} years • {patient.gender}
-                    </CardDescription>
+                    </CardDescription> */}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
+                {/* <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Phone className="h-4 w-4" />
                     <span>{patient.phone}</span>
@@ -125,7 +140,7 @@ const DoctorPatients: React.FC = () => {
                     <Calendar className="h-4 w-4" />
                     <span>Last Visit: {patient.lastVisit || 'N/A'}</span>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex gap-2 pt-2">
                   <Badge variant="secondary">
@@ -137,7 +152,7 @@ const DoctorPatients: React.FC = () => {
                   <Button 
                     className="flex-1" 
                     variant="default"
-                    onClick={() => navigate(`/doctor/patients/${patient.id}/records`)}
+                    onClick={() => navigate(`/doctor/patients/${patient.patient_id}/records`)}
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     View Records

@@ -12,6 +12,7 @@ import { getUpcomingAppointments } from '@/apis/appointments';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import ConsentManagement from '@/components/dashboard/ConsentManagement';
 
 interface Appointment {
   app_id: string;

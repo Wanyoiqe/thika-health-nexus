@@ -53,6 +53,14 @@ export interface Doctor {
   hospital_id: string | null;
 }
 
+export interface Patient {
+  patient_id: string;
+  user_id: string;
+  name: string;
+  full_name: string;
+  totalVisits: number;
+  lastVisit: string;
+}
 
 // DTO for /api/appointments/book
 export type BookAppointmentRequestDTO = {
@@ -107,3 +115,9 @@ export type AddDoctorRequestDTO = {
   message: string;
   user: User;
 }
+
+// DTO for /api/doctor/patients
+export type DoctorPatientsResponseDTO = {
+  result_code: number;
+  patients: Patient[];
+};

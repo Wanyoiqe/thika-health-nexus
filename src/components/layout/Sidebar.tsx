@@ -30,15 +30,18 @@ interface SidebarLinkProps {
 
 // Navigation links based on user roles - we'll expand this later
 const getDashboardLink = (role?: string) => {
-  switch (role) {
-    case "admin":
-      return "/admin/dashboard";
-    case "receptionist":
-      return "/receptionist/dashboard";
-    case "patient":
-      return "/patient/dashboard";
+  const mappedRole = role === 'doctor' ? 'provider' : role;
+  switch (mappedRole) {
+    case 'admin':
+      return '/admin/dashboard';
+    case 'receptionist':
+      return '/receptionist/dashboard';
+    case 'provider':  // Covers both 'provider' and mapped 'doctor'
+      return '/provider/dashboard';  // Or '/doctor/dashboard' if you prefer
+    case 'patient':
+      return '/patient/dashboard';
     default:
-      return "/dashboard";
+      return '/dashboard';
   }
 };
 
