@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,100 +9,91 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Plus, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
-
-interface ConsentRequest {
-  id: string;
-  patient_name: string;
-  patient_id: string;
-  request_date: string;
-  status: 'pending' | 'approved' | 'denied';
-  type: string;
-  purpose: string;
-}
+import { HealthRecord, ConsentRequest, CreateConsentRequest } from '@/types';
+import { getConsentRequests, getActiveConsents } from '@/apis/consent';
+import { useAuth } from '@/AuthContext';
+import { fetchDoctorsPatients } from '@/apis/providers';
+import { fetchDoctorsHealthRecords, createHealthRecordConsentRequest } from '@/apis/health-records';
 
 const DoctorConsent: React.FC = () => {
+  const { refreshToken } = useAuth();
+  const token = refreshToken || localStorage.getItem('refreshToken');
   const [selectedPatient, setSelectedPatient] = useState('');
-  const [consentType, setConsentType] = useState('');
+  const [selectedRecord, setSelectedRecord] = useState('');
   const [purpose, setPurpose] = useState('');
 
-  const [consentRequests, setConsentRequests] = useState<ConsentRequest[]>([
-    {
-      id: '1',
-      patient_name: 'John Doe',
-      patient_id: '1',
-      request_date: '2025-10-22',
-      status: 'pending',
-      type: 'Medical History',
-      purpose: 'Review past medical conditions for current treatment plan'
-    },
-    {
-      id: '2',
-      patient_name: 'Jane Smith',
-      patient_id: '2',
-      request_date: '2025-10-21',
-      status: 'approved',
-      type: 'Lab Results',
-      purpose: 'Access recent blood work results'
-    },
-    {
-      id: '3',
-      patient_name: 'Michael Johnson',
-      patient_id: '3',
-      request_date: '2025-10-20',
-      status: 'denied',
-      type: 'Medications',
-      purpose: 'Review current medication list'
-    },
-  ]);
+  const [consentRequests, setConsentRequests] = useState<ConsentRequest[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [healthRecords, setHealthRecords] = useState<any[]>([]);
 
-  const handleSubmitRequest = (e: React.FormEvent) => {
+  const filteredHealthRecords = selectedPatient
+    ? healthRecords.filter(record => record.patient_id === selectedPatient)
+    : healthRecords;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [requests, patientData, recordData] = await Promise.all([
+          getConsentRequests(token!),
+          fetchDoctorsPatients(token),
+          fetchDoctorsHealthRecords(token)
+        ]);
+        setConsentRequests(requests || []);
+        setPatients(patientData.patients || []);
+        setHealthRecords(recordData.health_records || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    if (token) fetchData();
+  }, [token]);
+
+  const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedPatient || !consentType || !purpose) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive',
-      });
+    if (!selectedPatient || !selectedRecord || !purpose) {
+      if (!selectedPatient) return toast.error('Please select a patient');
+      if (!selectedRecord) return toast.error('Please select a health record');
+      if (!purpose) return toast.error('Please provide a purpose for access');
       return;
     }
 
-    const newRequest: ConsentRequest = {
-      id: String(Date.now()),
-      patient_name: selectedPatient === '1' ? 'John Doe' : selectedPatient === '2' ? 'Jane Smith' : 'Michael Johnson',
-      patient_id: selectedPatient,
-      request_date: new Date().toISOString(),
-      status: 'pending',
-      type: consentType,
-      purpose: purpose,
-    };
+    try {
+      const selectedHealthRecord = healthRecords.find(r => r.record_id === selectedRecord);
+      
+      const newRequest: CreateConsentRequest = {
+        id: String(Date.now()),
+        patient_id: selectedPatient,
+        record_id: selectedRecord,
+        request_date: new Date().toISOString(),
+        status: 'pending',
+        type: selectedHealthRecord?.record_type || '',
+        purpose: purpose,
+      };
 
-    setConsentRequests([newRequest, ...consentRequests]);
-    
-    toast({
-      title: 'Success',
-      description: 'Consent request submitted successfully',
-    });
-
-    // Reset form
-    setSelectedPatient('');
-    setConsentType('');
-    setPurpose('');
+      await createHealthRecordConsentRequest(token!, newRequest);
+      toast.success('Consent request submitted successfully');
+      setSelectedPatient('');
+      // setConsentType('');
+      setPurpose('');
+    } catch (error) {
+      console.error('Error submitting consent request:', error);
+      toast.error('Failed to submit consent request');
+    }
   };
 
   const pendingRequests = consentRequests.filter(r => r.status === 'pending');
   const approvedRequests = consentRequests.filter(r => r.status === 'approved');
   const deniedRequests = consentRequests.filter(r => r.status === 'denied');
 
-  const ConsentCard = ({ request }: { request: ConsentRequest }) => (
+  const ConsentCard = ({ request }: { request: CreateConsentRequest }) => (
     <Card>
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold">{request.patient_name}</h3>
               <Badge 
                 variant={
                   request.status === 'approved' ? 'default' :
@@ -202,7 +193,7 @@ const DoctorConsent: React.FC = () => {
               <Plus className="h-5 w-5 text-primary" />
               Request Patient Consent
             </CardTitle>
-            <CardDescription>Submit a new consent request to access patient health records</CardDescription>
+            <CardDescription>Submit a new consent request to share patient health records</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmitRequest} className="space-y-4">
@@ -213,26 +204,36 @@ const DoctorConsent: React.FC = () => {
                     <SelectTrigger id="patient">
                       <SelectValue placeholder="Choose a patient" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">John Doe</SelectItem>
-                      <SelectItem value="2">Jane Smith</SelectItem>
-                      <SelectItem value="3">Michael Johnson</SelectItem>
-                    </SelectContent>
+                    {patients.length > 0 && (
+                      <SelectContent>
+                        {patients.map((patient) => (
+                          <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                            {patient.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    )}
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="consentType">Record Type</Label>
-                  <Select value={consentType} onValueChange={setConsentType}>
-                    <SelectTrigger id="consentType">
-                      <SelectValue placeholder="Select record type" />
+                  <Label htmlFor="healthRecord">Health Record</Label>
+                  <Select value={selectedRecord} onValueChange={setSelectedRecord}>
+                    <SelectTrigger id="healthRecord">
+                      <SelectValue placeholder="Select a health record" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Medical History">Medical History</SelectItem>
-                      <SelectItem value="Lab Results">Lab Results</SelectItem>
-                      <SelectItem value="Medications">Medications</SelectItem>
-                      <SelectItem value="Vitals">Vital Signs</SelectItem>
-                      <SelectItem value="All Records">All Records</SelectItem>
-                    </SelectContent>
+                    {filteredHealthRecords.length > 0 ? (
+                      <SelectContent>
+                        {filteredHealthRecords.map((record) => (
+                          <SelectItem key={record.record_id} value={record.record_id}>
+                            {record.record_type.charAt(0).toUpperCase() + record.record_type.slice(1).replace('_', ' ')} by {record.patient_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    ) : selectedPatient ? (
+                      <SelectContent>
+                        <SelectItem value="" disabled>No health records found for this patient</SelectItem>
+                      </SelectContent>
+                    ) : null}
                   </Select>
                 </div>
               </div>
@@ -255,7 +256,7 @@ const DoctorConsent: React.FC = () => {
         </Card>
 
         {/* Requests Tabs */}
-        <Tabs defaultValue="pending" className="w-full">
+        {/* <Tabs defaultValue="pending" className="w-full">
           <TabsList className="grid w-full md:w-auto grid-cols-3">
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -309,7 +310,7 @@ const DoctorConsent: React.FC = () => {
               ))
             )}
           </TabsContent>
-        </Tabs>
+        </Tabs> */}
       </div>
     </MainLayout>
   );

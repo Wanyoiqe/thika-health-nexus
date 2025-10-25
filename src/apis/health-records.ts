@@ -1,5 +1,5 @@
 import { privateAPIUtil } from './appointments';
-import type { LabResults, Medication, Vitals,HealthRecord,HealthRecordResponseDTO } from '../types';  
+import type { LabResults, Medication, Vitals,HealthRecord,HealthRecordResponseDTO, DoctorHealthRecordsResponseDTO, CreateConsentRequest } from '../types';  
 
 // Fetch health record by appointment ID
 export const getHealthRecordByAppointment = async (token: string, appointmentId: string, patientId: string) => {
@@ -14,6 +14,17 @@ export const getHealthRecordByAppointment = async (token: string, appointmentId:
   }
 };
 
+// Get all doctors for a time window
+export const fetchDoctorsHealthRecords = async (token: string) => {
+  try {
+    const response = await privateAPIUtil(token).get<DoctorHealthRecordsResponseDTO>('/api/health-records/doctor-records');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch available doctors');
+  }
+};
+
+
 // Create health record
 export const createHealthRecord = async (
   token: string,
@@ -24,7 +35,7 @@ export const createHealthRecord = async (
   }
 ) => {
   try {
-    const response = await privateAPIUtil(token).post('/api/health-records', data);
+    const response = await privateAPIUtil(token).post('/api/healthrecords/create', data);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to create health record');
@@ -45,5 +56,17 @@ export const updateHealthRecord = async (
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to update health record');
+  }
+};
+
+
+
+// Create health record
+export const createHealthRecordConsentRequest = async (token: string, request: CreateConsentRequest) => {
+  try {
+    const response = await privateAPIUtil(token).post('/api/consents/create', request);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to create health record');
   }
 };

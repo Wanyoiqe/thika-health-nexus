@@ -51,6 +51,29 @@ const DoctorHealthRecords: React.FC = () => {
     height: '',
   });
 
+  type LabResults = {
+    testName: string;
+    result: string;
+    normalRange: string;
+    notes: string;
+  };
+
+  type Medication = {
+    medicationName: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions: string;
+  };
+
+  type Vitals = {
+    bloodPressure: string;
+    heartRate: string;
+    temperature: string;
+    weight: string;
+    height: string;
+  };
+
   const [patients, setPatients] = useState<Patient[]>([]);
   
   useEffect(() => {
@@ -94,20 +117,51 @@ const DoctorHealthRecords: React.FC = () => {
     
     const loadHealthRecord = async () => {
       try {
-        const record = await getHealthRecordByAppointment(refreshToken, selectedAppointment, selectedPatient);
-        setHealthRecord(record);
-        if (record) {
-          setRecordType(record.health_record.record_type);
+        const response = await getHealthRecordByAppointment(refreshToken, selectedAppointment, selectedPatient);
+        console.log('Full response:', response);
+        setHealthRecord(response);
+
+        // Check if we have a health record
+        if (response?.health_record) {
+          const recordData = response.health_record.data;
+          console.log('Record type:', response.health_record.record_type);
+          console.log('Record data:', recordData);
+          
+          setRecordType(response.health_record.record_type);
+          
           // Set form data based on record type
-          if (record.health_record.record_type === 'lab_results') {
-            const labData = record.health_record.data as { testName: string; result: string; normalRange: string; notes: string; };
-            setLabResults(labData);
-          } else if (record.health_record.record_type === 'medication') {
-            const medData = record.health_record.data as { medicationName: string; dosage: string; frequency: string; duration: string; instructions: string; };
-            setMedication(medData);
-          } else if (record.health_record.record_type === 'vitals') {
-            const vitalData = record.health_record.data as { bloodPressure: string; heartRate: string; temperature: string; weight: string; height: string; };
-            setVitals(vitalData);
+          if (response.health_record.record_type === 'lab_results') {
+            const typedData = recordData as LabResults;
+            const normalizedLabData = {
+              testName: typedData.testName || '',
+              result: typedData.result || '',
+              normalRange: typedData.normalRange || '',
+              notes: typedData.notes || ''
+            };
+            console.log('Setting lab data:', normalizedLabData);
+            setLabResults(normalizedLabData);
+          } else if (response.health_record.record_type === 'medication') {
+            const typedData = recordData as Medication;
+            const normalizedMedData = {
+              medicationName: typedData.medicationName || '',
+              dosage: typedData.dosage || '',
+              frequency: typedData.frequency || '',
+              duration: typedData.duration || '',
+              instructions: typedData.instructions || ''
+            };
+            console.log('Setting medication data:', normalizedMedData);
+            setMedication(normalizedMedData);
+          } else if (response.health_record.record_type === 'vitals') {
+            const typedData = recordData as Vitals;
+            const normalizedVitalData = {
+              bloodPressure: typedData.bloodPressure || '',
+              heartRate: typedData.heartRate || '',
+              temperature: typedData.temperature || '',
+              weight: typedData.weight || '',
+              height: typedData.height || ''
+            };
+            console.log('Setting vitals data:', normalizedVitalData);
+            setVitals(normalizedVitalData);
           }
         } else {
           // Reset forms if no record exists
@@ -116,6 +170,10 @@ const DoctorHealthRecords: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching health record:', error);
+        // Reset state in case of error
+        setHealthRecord(null);
+        setRecordType('');
+        resetForms();
         toast.error('Failed to fetch health record');
       }
     };
@@ -136,13 +194,15 @@ const DoctorHealthRecords: React.FC = () => {
       return;
     }
     try {
-      await createHealthRecord(refreshToken!, {
+      const response = await createHealthRecord(refreshToken!, {
         appointment_id: selectedAppointment,
         record_type: 'lab_results',
         data: labResults
       });
       toast.success('Lab results added successfully');
-      resetForms();
+      // Load the newly created record
+      const newRecord = await getHealthRecordByAppointment(refreshToken!, selectedAppointment, selectedPatient);
+      setHealthRecord(newRecord);
     } catch (error) {
       console.error('Error submitting lab results:', error);
       toast.error('Failed to save lab results');
@@ -156,13 +216,15 @@ const DoctorHealthRecords: React.FC = () => {
       return;
     }
     try {
-      await createHealthRecord(refreshToken!, {
+      const response = await createHealthRecord(refreshToken!, {
         appointment_id: selectedAppointment,
         record_type: 'medication',
         data: medication
       });
       toast.success('Medication prescribed successfully');
-      resetForms();
+      // Load the newly created record
+      const newRecord = await getHealthRecordByAppointment(refreshToken!, selectedAppointment, selectedPatient);
+      setHealthRecord(newRecord);
     } catch (error) {
       console.error('Error submitting medication:', error);
       toast.error('Failed to save medication');
@@ -176,13 +238,15 @@ const DoctorHealthRecords: React.FC = () => {
       return;
     }
     try {
-      await createHealthRecord(refreshToken!, {
+      const response = await createHealthRecord(refreshToken!, {
         appointment_id: selectedAppointment,
         record_type: 'vitals',
         data: vitals
       });
       toast.success('Vitals recorded successfully');
-      resetForms();
+      // Load the newly created record
+      const newRecord = await getHealthRecordByAppointment(refreshToken!, selectedAppointment, selectedPatient);
+      setHealthRecord(newRecord);
     } catch (error) {
       console.error('Error submitting vitals:', error);
       toast.error('Failed to save vitals');
@@ -247,11 +311,48 @@ const DoctorHealthRecords: React.FC = () => {
         </Card>
 
         {selectedAppointment && (
-          <Tabs defaultValue="record-type" className="w-full">
+          <Tabs 
+            defaultValue={healthRecord?.health_record?.record_type || "lab-results"} 
+            className="w-full"
+          >
+            {healthRecord?.health_record ? (
+              <div className="mb-4 space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="font-medium">Current Record Type: {healthRecord.health_record.record_type}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Last updated: {new Date(healthRecord.health_record.updated_at).toLocaleString()}</p>
+                </div>
+                <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                  <p className="text-sm text-yellow-700">
+                    <strong>Note:</strong> Health records are immutable once created. You are viewing this record in read-only mode.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+                <p className="text-sm text-blue-700">
+                  <strong>Important:</strong> Select a record type carefully. Once a health record is created, its type cannot be changed.
+                </p>
+              </div>
+            )}
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-              <TabsTrigger value="lab-results">Lab Results</TabsTrigger>
-              <TabsTrigger value="medications">Medications</TabsTrigger>
-              <TabsTrigger value="vitals">Vitals</TabsTrigger>
+              <TabsTrigger 
+                value="lab-results"
+                disabled={healthRecord?.health_record && healthRecord.health_record.record_type !== 'lab_results'}
+              >
+                Lab Results
+              </TabsTrigger>
+              <TabsTrigger 
+                value="medications"
+                disabled={healthRecord?.health_record && healthRecord.health_record.record_type !== 'medication'}
+              >
+                Medications
+              </TabsTrigger>
+              <TabsTrigger 
+                value="vitals"
+                disabled={healthRecord?.health_record && healthRecord.health_record.record_type !== 'vitals'}
+              >
+                Vitals
+              </TabsTrigger>
             </TabsList>
 
             {/* Lab Results Tab */}
@@ -274,6 +375,8 @@ const DoctorHealthRecords: React.FC = () => {
                         onChange={(e) => setLabResults({ ...labResults, testName: e.target.value })}
                         placeholder="e.g., Complete Blood Count"
                         required
+                        readOnly={healthRecord?.health_record?.record_type === 'lab_results'}
+                        className={healthRecord?.health_record?.record_type === 'lab_results' ? 'bg-muted' : ''}
                       />
                     </div>
                     <div className="space-y-2">
@@ -284,6 +387,8 @@ const DoctorHealthRecords: React.FC = () => {
                         onChange={(e) => setLabResults({ ...labResults, result: e.target.value })}
                         placeholder="Enter test result"
                         required
+                        readOnly={healthRecord?.health_record?.record_type === 'lab_results'}
+                        className={healthRecord?.health_record?.record_type === 'lab_results' ? 'bg-muted' : ''}
                       />
                     </div>
                     <div className="space-y-2">
@@ -293,6 +398,8 @@ const DoctorHealthRecords: React.FC = () => {
                         value={labResults.normalRange}
                         onChange={(e) => setLabResults({ ...labResults, normalRange: e.target.value })}
                         placeholder="Enter normal range"
+                        readOnly={healthRecord?.health_record?.record_type === 'lab_results'}
+                        className={healthRecord?.health_record?.record_type === 'lab_results' ? 'bg-muted' : ''}
                       />
                     </div>
                     <div className="space-y-2">
@@ -302,12 +409,16 @@ const DoctorHealthRecords: React.FC = () => {
                         value={labResults.notes}
                         onChange={(e) => setLabResults({ ...labResults, notes: e.target.value })}
                         placeholder="Additional observations"
+                        readOnly={healthRecord?.health_record?.record_type === 'lab_results'}
+                        className={healthRecord?.health_record?.record_type === 'lab_results' ? 'bg-muted' : ''}
                       />
                     </div>
-                    <Button type="submit" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Lab Results
-                    </Button>
+                    {!healthRecord?.health_record && (
+                      <Button type="submit" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Lab Results
+                      </Button>
+                    )}
                   </form>
                 </CardContent>
               </Card>
@@ -333,6 +444,8 @@ const DoctorHealthRecords: React.FC = () => {
                         onChange={(e) => setMedication({ ...medication, medicationName: e.target.value })}
                         placeholder="e.g., Amoxicillin"
                         required
+                        readOnly={healthRecord?.health_record?.record_type === 'medication'}
+                        className={healthRecord?.health_record?.record_type === 'medication' ? 'bg-muted' : ''}
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,6 +457,8 @@ const DoctorHealthRecords: React.FC = () => {
                           onChange={(e) => setMedication({ ...medication, dosage: e.target.value })}
                           placeholder="e.g., 500mg"
                           required
+                          readOnly={healthRecord?.health_record?.record_type === 'medication'}
+                          className={healthRecord?.health_record?.record_type === 'medication' ? 'bg-muted' : ''}
                         />
                       </div>
                       <div className="space-y-2">
@@ -354,6 +469,8 @@ const DoctorHealthRecords: React.FC = () => {
                           onChange={(e) => setMedication({ ...medication, frequency: e.target.value })}
                           placeholder="e.g., Twice daily"
                           required
+                          readOnly={healthRecord?.health_record?.record_type === 'medication'}
+                          className={healthRecord?.health_record?.record_type === 'medication' ? 'bg-muted' : ''}
                         />
                       </div>
                     </div>
@@ -365,6 +482,8 @@ const DoctorHealthRecords: React.FC = () => {
                         onChange={(e) => setMedication({ ...medication, duration: e.target.value })}
                         placeholder="e.g., 7 days"
                         required
+                        readOnly={healthRecord?.health_record?.record_type === 'medication'}
+                        className={healthRecord?.health_record?.record_type === 'medication' ? 'bg-muted' : ''}
                       />
                     </div>
                     <div className="space-y-2">
@@ -374,12 +493,16 @@ const DoctorHealthRecords: React.FC = () => {
                         value={medication.instructions}
                         onChange={(e) => setMedication({ ...medication, instructions: e.target.value })}
                         placeholder="Special instructions for the patient"
+                        readOnly={healthRecord?.health_record?.record_type === 'medication'}
+                        className={healthRecord?.health_record?.record_type === 'medication' ? 'bg-muted' : ''}
                       />
                     </div>
-                    <Button type="submit" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Medication
-                    </Button>
+                    {!healthRecord?.health_record && (
+                      <Button type="submit" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Medication
+                      </Button>
+                    )}
                   </form>
                 </CardContent>
               </Card>
@@ -406,6 +529,8 @@ const DoctorHealthRecords: React.FC = () => {
                           onChange={(e) => setVitals({ ...vitals, bloodPressure: e.target.value })}
                           placeholder="e.g., 120/80"
                           required
+                          readOnly={healthRecord?.health_record?.record_type === 'vitals'}
+                          className={healthRecord?.health_record?.record_type === 'vitals' ? 'bg-muted' : ''}
                         />
                       </div>
                       <div className="space-y-2">
@@ -417,6 +542,8 @@ const DoctorHealthRecords: React.FC = () => {
                           onChange={(e) => setVitals({ ...vitals, heartRate: e.target.value })}
                           placeholder="e.g., 72"
                           required
+                          readOnly={healthRecord?.health_record?.record_type === 'vitals'}
+                          className={healthRecord?.health_record?.record_type === 'vitals' ? 'bg-muted' : ''}
                         />
                       </div>
                     </div>
@@ -431,6 +558,8 @@ const DoctorHealthRecords: React.FC = () => {
                           onChange={(e) => setVitals({ ...vitals, temperature: e.target.value })}
                           placeholder="e.g., 37.0"
                           required
+                          readOnly={healthRecord?.health_record?.record_type === 'vitals'}
+                          className={healthRecord?.health_record?.record_type === 'vitals' ? 'bg-muted' : ''}
                         />
                       </div>
                       <div className="space-y-2">
@@ -442,6 +571,8 @@ const DoctorHealthRecords: React.FC = () => {
                           value={vitals.weight}
                           onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
                           placeholder="e.g., 70.5"
+                          readOnly={healthRecord?.health_record?.record_type === 'vitals'}
+                          className={healthRecord?.health_record?.record_type === 'vitals' ? 'bg-muted' : ''}
                         />
                       </div>
                       <div className="space-y-2">
@@ -452,13 +583,17 @@ const DoctorHealthRecords: React.FC = () => {
                           value={vitals.height}
                           onChange={(e) => setVitals({ ...vitals, height: e.target.value })}
                           placeholder="e.g., 175"
+                          readOnly={healthRecord?.health_record?.record_type === 'vitals'}
+                          className={healthRecord?.health_record?.record_type === 'vitals' ? 'bg-muted' : ''}
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Record Vitals
-                    </Button>
+                    {!healthRecord?.health_record && (
+                      <Button type="submit" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Record Vitals
+                      </Button>
+                    )}
                   </form>
                 </CardContent>
               </Card>

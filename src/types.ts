@@ -69,6 +69,15 @@ export interface Patient {
   lastVisit: string;
 }
 
+export interface ActiveConsent {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  specialization: string;
+  grantedDate: string;
+  expiryDate: string;
+}
+
 export interface LabResults {
   testName: string;
   result: string;
@@ -97,10 +106,31 @@ export interface HealthRecord {
   appointment_id: string;
   patient_id: string;
   provider_id: string;
+  patient_name: string;
   record_type: 'lab_results' | 'medication' | 'vitals';
   data: LabResults | Medication | Vitals;
   created_at: string;
   updated_at: string;
+}
+
+export interface ConsentRequest {
+  id: string;
+  patient_name: string;
+  patient_id: string;
+  request_date: string;
+  status: 'pending' | 'approved' | 'denied';
+  type: string;
+  purpose: string;
+}
+
+export interface CreateConsentRequest {
+  id: string;
+  patient_id: string;
+  record_id: string;
+  request_date: string;
+  status: 'pending' | 'approved' | 'denied';
+  type: string;
+  purpose: string;
 }
 
 // DTO for /api/appointments/book
@@ -173,4 +203,10 @@ export type ReceptionistDashboardDetails = {
 export type HealthRecordResponseDTO = {
   result_code: number;
   health_record: HealthRecord;
+};
+
+// DTO for /api/providers/fetch_doctors_patients
+export type DoctorHealthRecordsResponseDTO = {
+  result_code: number;
+  health_records: HealthRecord[];
 };
