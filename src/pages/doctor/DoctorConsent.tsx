@@ -11,8 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Plus, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
-import { HealthRecord, ConsentRequest, CreateConsentRequest } from '@/types';
-import { getConsentRequests, getActiveConsents } from '@/apis/consent';
+import { ConsentRequest, CreateConsentRequest } from '@/types';
+import { getConsentRequests } from '@/apis/consent';
 import { useAuth } from '@/AuthContext';
 import { fetchDoctorsPatients } from '@/apis/providers';
 import { fetchDoctorsHealthRecords, createHealthRecordConsentRequest } from '@/apis/health-records';
@@ -76,7 +76,6 @@ const DoctorConsent: React.FC = () => {
       await createHealthRecordConsentRequest(token!, newRequest);
       toast.success('Consent request submitted successfully');
       setSelectedPatient('');
-      // setConsentType('');
       setPurpose('');
     } catch (error) {
       console.error('Error submitting consent request:', error);
@@ -84,11 +83,13 @@ const DoctorConsent: React.FC = () => {
     }
   };
 
+  console.log('Consent Requests:', consentRequests);
+
   const pendingRequests = consentRequests.filter(r => r.status === 'pending');
   const approvedRequests = consentRequests.filter(r => r.status === 'approved');
   const deniedRequests = consentRequests.filter(r => r.status === 'denied');
 
-  const ConsentCard = ({ request }: { request: CreateConsentRequest }) => (
+  const ConsentCard = ({ request }: { request: ConsentRequest }) => (
     <Card>
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -106,13 +107,10 @@ const DoctorConsent: React.FC = () => {
             </div>
             <div className="space-y-1 text-sm">
               <p className="text-muted-foreground">
-                <span className="font-medium">Type:</span> {request.type}
-              </p>
-              <p className="text-muted-foreground">
                 <span className="font-medium">Purpose:</span> {request.purpose}
               </p>
               <p className="text-muted-foreground">
-                <span className="font-medium">Requested:</span> {format(new Date(request.request_date), 'MMM dd, yyyy')}
+                <span className="font-medium">Requested Date :</span> {request.request_date}
               </p>
             </div>
           </div>
@@ -256,7 +254,7 @@ const DoctorConsent: React.FC = () => {
         </Card>
 
         {/* Requests Tabs */}
-        {/* <Tabs defaultValue="pending" className="w-full">
+        <Tabs defaultValue="pending" className="w-full">
           <TabsList className="grid w-full md:w-auto grid-cols-3">
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -310,7 +308,7 @@ const DoctorConsent: React.FC = () => {
               ))
             )}
           </TabsContent>
-        </Tabs> */}
+        </Tabs>
       </div>
     </MainLayout>
   );
