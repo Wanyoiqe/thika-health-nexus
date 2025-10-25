@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { AddDoctorRequestDTO, DoctorPatientsResponseDTO, LoginResponse } from '../types';  
+import type { DoctorPatientsResponseDTO, ReceptionistDashboardDetails } from '../types';  
 
 const API_URL = 'http://localhost:5000' // Replace with your backend URL
 
@@ -31,5 +31,14 @@ export const fetchDoctorsPatients = async (token: string) => {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || 'Failed to fetch available doctors');
+  }
+};
+
+export const fetchReceptionistDashboardDetails = async (token: string) => {
+  try {
+      const response = await privateAPIUtil(token).get<ReceptionistDashboardDetails>('/api/providers/dashboard_details');
+      return response.data;
+  } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch receptionist dashboard details');
   }
 };

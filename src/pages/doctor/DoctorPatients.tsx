@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search, User, Phone, Mail, Calendar, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchDoctorsPatients,  } from '@/apis/doctor';
+import { fetchDoctorsPatients,  } from '@/apis/providers';
 import { Patient } from '@/types';
 import { useAuth } from '@/AuthContext';
 
@@ -17,41 +17,6 @@ export const DoctorPatients: React.FC = () => {
   const { user, refreshToken } = useAuth();
   // const refresh
   const [searchQuery, setSearchQuery] = useState('');
-  // const [patients, setPatients] = useState<Patient[]>([
-  //   {
-  //     id: '1',
-  //     firstName: 'John',
-  //     lastName: 'Doe',
-  //     age: 45,
-  //     gender: 'Male',
-  //     phone: '+254 712 345 678',
-  //     email: 'john.doe@email.com',
-  //     lastVisit: '2025-10-20',
-  //     totalVisits: 12
-  //   },
-  //   {
-  //     id: '2',
-  //     firstName: 'Jane',
-  //     lastName: 'Smith',
-  //     age: 32,
-  //     gender: 'Female',
-  //     phone: '+254 723 456 789',
-  //     email: 'jane.smith@email.com',
-  //     lastVisit: '2025-10-21',
-  //     totalVisits: 8
-  //   },
-  //   {
-  //     id: '3',
-  //     firstName: 'Michael',
-  //     lastName: 'Johnson',
-  //     age: 28,
-  //     gender: 'Male',
-  //     phone: '+254 734 567 890',
-  //     email: 'michael.j@email.com',
-  //     lastVisit: '2025-10-19',
-  //     totalVisits: 5
-  //   },
-  // ]);
   const [patients, setPatients] = useState<Patient[]>([]);
 
   useEffect(() => {

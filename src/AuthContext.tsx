@@ -68,6 +68,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('user');
       }
     }
+    const storedToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
+    if (storedToken) {
+      setRefreshToken(storedToken);
+    }
   }, []);
 
   const refreshUser = async () => {
@@ -127,6 +131,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setRefreshToken(response.token);
     Cookies.set('refreshToken', response.token, { expires: 7 });
+    localStorage.setItem('user', JSON.stringify(transformedUser));
+    localStorage.setItem('refreshToken', response.token);
     return response;
   };
 
@@ -135,6 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRefreshToken('');
     localStorage.removeItem('user');
     Cookies.remove('refreshToken');
+    localStorage.removeItem('refreshToken');
   };
 
   return (

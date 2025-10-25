@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,19 +8,34 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Plus, Activity, Pill, TestTube, Heart } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
+import { fetchDoctorsPatients,  } from '@/apis/providers';
+import { Patient } from '@/types';
+import { useAuth } from '@/AuthContext';
 
 const DoctorHealthRecords: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState('');
   const [recordType, setRecordType] = useState('');
+  const { user, refreshToken } = useAuth();
 
-  // // Medical History Form State
-  // const [medicalHistory, setMedicalHistory] = useState({
-  //   diagnosis: '',
-  //   symptoms: '',
-  //   treatment: '',
-  //   notes: '',
-  // });
+  const [patients, setPatients] = useState<Patient[]>([]);
+  
+  useEffect(() => {
+    if (!refreshToken) return;
+    const loadPatients = async () => {
+        try {
+          const data = await fetchDoctorsPatients(refreshToken);
+          console.log('Fetched patients:', data.patients);
+          setPatients(data.patients);
+        }
+        catch (error) {
+          console.error('Error fetching patients:', error);
+        }
+      };
+
+      loadPatients();
+    }
+  , []);
 
   // Lab Results Form State
   const [labResults, setLabResults] = useState({
@@ -48,39 +63,21 @@ const DoctorHealthRecords: React.FC = () => {
     height: '',
   });
 
-  // const handleSubmitMedicalHistory = (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   toast({
-  //     title: 'Success',
-  //     description: 'Medical history record added successfully',
-  //   });
-  //   setMedicalHistory({ diagnosis: '', symptoms: '', treatment: '', notes: '' });
-  // };
-
   const handleSubmitLabResults = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: 'Success',
-      description: 'Lab results added successfully',
-    });
+    toast.success('Lab results added successfully');
     setLabResults({ testName: '', result: '', normalRange: '', notes: '' });
   };
 
   const handleSubmitMedication = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: 'Success',
-      description: 'Medication record added successfully',
-    });
+    toast.success('Medication prescribed successfully');
     setMedication({ medicationName: '', dosage: '', frequency: '', duration: '', instructions: '' });
   };
 
   const handleSubmitVitals = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: 'Success',
-      description: 'Vital signs recorded successfully',
-    });
+    toast.success('Vitals recorded successfully');
     setVitals({ bloodPressure: '', heartRate: '', temperature: '', weight: '', height: '' });
   };
 
@@ -104,11 +101,13 @@ const DoctorHealthRecords: React.FC = () => {
               <SelectTrigger className="w-full md:w-[400px]">
                 <SelectValue placeholder="Select a patient" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">John Doe</SelectItem>
-                <SelectItem value="2">Jane Smith</SelectItem>
-                <SelectItem value="3">Michael Johnson</SelectItem>
-              </SelectContent>
+              {patients.map((patient) => (
+                <SelectContent key={patient.patient_id}>
+                  <SelectItem value={patient.patient_id}>
+                    {patient.full_name}
+                  </SelectItem>
+                </SelectContent>
+              ))}
             </Select>
           </CardContent>
         </Card>

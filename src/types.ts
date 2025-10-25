@@ -11,6 +11,13 @@ export type getAllAppointmentsDTO = {
     appointments: Appointment[];
 };
 
+export interface ReceptionistData {
+  patientCount: number;
+  staffCount: number;
+  appointmentCount: number;
+  appointmentCountToday: number;
+}
+
 export type Appointment = {
   app_id: string;
   date_time: string;
@@ -120,4 +127,10 @@ export type AddDoctorRequestDTO = {
 export type DoctorPatientsResponseDTO = {
   result_code: number;
   patients: Patient[];
+};
+
+// DTO for /api/doctor/patients
+export type ReceptionistDashboardDetails = {
+  result_code: number;
+  data: ReceptionistData[];
 };

@@ -27,12 +27,16 @@ interface Appointment {
 }
 
 const PatientDashboard: React.FC = () => {
-  const { user, refreshToken } = useAuth();
+  const { user,  } = useAuth();
+  let {refreshToken} = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    if (refreshToken === null) {
+      refreshToken = localStorage.getItem('refreshToken')!;
+    }
     if (user && refreshToken) {
       fetchUpcomingAppointments();
     }
