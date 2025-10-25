@@ -10,33 +10,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, Plus, Activity, Pill, TestTube, Heart } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { fetchDoctorsPatients,  } from '@/apis/providers';
-import { Patient } from '@/types';
+import { Appointment, Patient } from '@/types';
 import { useAuth } from '@/AuthContext';
+import { getPatientAppointments } from '@/apis/appointments';
+import { getHealthRecordByAppointment, createHealthRecord } from '@/apis/health-records';
+import { HealthRecord } from '@/types';
 
 const DoctorHealthRecords: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState('');
-  const [recordType, setRecordType] = useState('');
+  const [selectedAppointment, setSelectedAppointment] = useState('');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [healthRecord, setHealthRecord] = useState(null);
+  const [recordType, setRecordType] = useState<'lab_results' | 'medication' | 'vitals' | ''>('');
   const { user, refreshToken } = useAuth();
 
-  const [patients, setPatients] = useState<Patient[]>([]);
   
-  useEffect(() => {
-    if (!refreshToken) return;
-    const loadPatients = async () => {
-        try {
-          const data = await fetchDoctorsPatients(refreshToken);
-          console.log('Fetched patients:', data.patients);
-          setPatients(data.patients);
-        }
-        catch (error) {
-          console.error('Error fetching patients:', error);
-        }
-      };
-
-      loadPatients();
-    }
-  , []);
-
   // Lab Results Form State
   const [labResults, setLabResults] = useState({
     testName: '',
@@ -63,22 +51,142 @@ const DoctorHealthRecords: React.FC = () => {
     height: '',
   });
 
-  const handleSubmitLabResults = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success('Lab results added successfully');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  
+  useEffect(() => {
+    if (!refreshToken) return;
+    const loadPatients = async () => {
+      try {
+        const data = await fetchDoctorsPatients(refreshToken);
+        console.log('Fetched patients:', data.patients);
+        setPatients(data.patients);
+      } catch (error) {
+        console.error('Error fetching patients:', error);
+        toast.error('Failed to fetch patients');
+      }
+    };
+
+    loadPatients();
+  }, [refreshToken]);
+
+  // Fetch appointments when patient is selected
+  useEffect(() => {
+    if (!selectedPatient || !refreshToken) return;
+    
+    const loadAppointments = async () => {
+      try {
+        const data = await getPatientAppointments(refreshToken, selectedPatient);
+        setAppointments(data.appointments);
+        setSelectedAppointment(''); // Reset appointment selection
+        setHealthRecord(null); // Reset health record
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        toast.error('Failed to fetch appointments');
+      }
+    };
+
+    loadAppointments();
+  }, [selectedPatient, refreshToken]);
+
+  // Fetch health record when appointment is selected
+  useEffect(() => {
+    if (!selectedAppointment || !refreshToken) return;
+    
+    const loadHealthRecord = async () => {
+      try {
+        const record = await getHealthRecordByAppointment(refreshToken, selectedAppointment, selectedPatient);
+        setHealthRecord(record);
+        if (record) {
+          setRecordType(record.health_record.record_type);
+          // Set form data based on record type
+          if (record.health_record.record_type === 'lab_results') {
+            const labData = record.health_record.data as { testName: string; result: string; normalRange: string; notes: string; };
+            setLabResults(labData);
+          } else if (record.health_record.record_type === 'medication') {
+            const medData = record.health_record.data as { medicationName: string; dosage: string; frequency: string; duration: string; instructions: string; };
+            setMedication(medData);
+          } else if (record.health_record.record_type === 'vitals') {
+            const vitalData = record.health_record.data as { bloodPressure: string; heartRate: string; temperature: string; weight: string; height: string; };
+            setVitals(vitalData);
+          }
+        } else {
+          // Reset forms if no record exists
+          setRecordType('');
+          resetForms();
+        }
+      } catch (error) {
+        console.error('Error fetching health record:', error);
+        toast.error('Failed to fetch health record');
+      }
+    };
+
+    loadHealthRecord();
+  }, [selectedAppointment, refreshToken]);
+
+  const resetForms = () => {
     setLabResults({ testName: '', result: '', normalRange: '', notes: '' });
-  };
-
-  const handleSubmitMedication = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success('Medication prescribed successfully');
     setMedication({ medicationName: '', dosage: '', frequency: '', duration: '', instructions: '' });
+    setVitals({ bloodPressure: '', heartRate: '', temperature: '', weight: '', height: '' });
   };
 
-  const handleSubmitVitals = (e: React.FormEvent) => {
+  const handleSubmitLabResults = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Vitals recorded successfully');
-    setVitals({ bloodPressure: '', heartRate: '', temperature: '', weight: '', height: '' });
+    if (!selectedAppointment) {
+      toast.error('Please select an appointment first');
+      return;
+    }
+    try {
+      await createHealthRecord(refreshToken!, {
+        appointment_id: selectedAppointment,
+        record_type: 'lab_results',
+        data: labResults
+      });
+      toast.success('Lab results added successfully');
+      resetForms();
+    } catch (error) {
+      console.error('Error submitting lab results:', error);
+      toast.error('Failed to save lab results');
+    }
+  };
+
+  const handleSubmitMedication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppointment) {
+      toast.error('Please select an appointment first');
+      return;
+    }
+    try {
+      await createHealthRecord(refreshToken!, {
+        appointment_id: selectedAppointment,
+        record_type: 'medication',
+        data: medication
+      });
+      toast.success('Medication prescribed successfully');
+      resetForms();
+    } catch (error) {
+      console.error('Error submitting medication:', error);
+      toast.error('Failed to save medication');
+    }
+  };
+
+  const handleSubmitVitals = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppointment) {
+      toast.error('Please select an appointment first');
+      return;
+    }
+    try {
+      await createHealthRecord(refreshToken!, {
+        appointment_id: selectedAppointment,
+        record_type: 'vitals',
+        data: vitals
+      });
+      toast.success('Vitals recorded successfully');
+      resetForms();
+    } catch (error) {
+      console.error('Error submitting vitals:', error);
+      toast.error('Failed to save vitals');
+    }
   };
 
   return (
@@ -97,88 +205,54 @@ const DoctorHealthRecords: React.FC = () => {
             <CardDescription>Choose a patient to add or update their health records</CardDescription>
           </CardHeader>
           <CardContent>
-            <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-              <SelectTrigger className="w-full md:w-[400px]">
-                <SelectValue placeholder="Select a patient" />
-              </SelectTrigger>
-              {patients.map((patient) => (
-                <SelectContent key={patient.patient_id}>
-                  <SelectItem value={patient.patient_id}>
-                    {patient.full_name}
-                  </SelectItem>
+            <div className="space-y-4">
+              <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+                <SelectTrigger className="w-full md:w-[400px]">
+                  <SelectValue placeholder="Select a patient" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                      {patient.full_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
-              ))}
-            </Select>
+              </Select>
+
+              {selectedPatient && appointments.length > 0 && (
+                <div className="mt-4">
+                  <Label>Select Appointment</Label>
+                  <Select value={selectedAppointment} onValueChange={setSelectedAppointment}>
+                    <SelectTrigger className="w-full md:w-[400px]">
+                      <SelectValue placeholder="Select an appointment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {appointments.map((appointment) => (
+                        <SelectItem key={appointment.app_id} value={appointment.app_id}>
+                          {new Date(appointment.date_time).toLocaleString()} - {appointment.status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {selectedPatient && appointments.length === 0 && (
+                <div className="text-sm text-muted-foreground mt-2">
+                  No appointments found for this patient
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {selectedPatient && (
-          <Tabs defaultValue="medical-history" className="w-full">
+        {selectedAppointment && (
+          <Tabs defaultValue="record-type" className="w-full">
             <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
               <TabsTrigger value="lab-results">Lab Results</TabsTrigger>
               <TabsTrigger value="medications">Medications</TabsTrigger>
               <TabsTrigger value="vitals">Vitals</TabsTrigger>
             </TabsList>
-
-            {/* Medical History Tab
-            <TabsContent value="medical-history">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Add Medical History
-                  </CardTitle>
-                  <CardDescription>Record diagnosis, symptoms, and treatment</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmitMedicalHistory} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="diagnosis">Diagnosis</Label>
-                      <Input
-                        id="diagnosis"
-                        value={medicalHistory.diagnosis}
-                        onChange={(e) => setMedicalHistory({ ...medicalHistory, diagnosis: e.target.value })}
-                        placeholder="Enter diagnosis"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="symptoms">Symptoms</Label>
-                      <Textarea
-                        id="symptoms"
-                        value={medicalHistory.symptoms}
-                        onChange={(e) => setMedicalHistory({ ...medicalHistory, symptoms: e.target.value })}
-                        placeholder="Describe symptoms"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="treatment">Treatment Plan</Label>
-                      <Textarea
-                        id="treatment"
-                        value={medicalHistory.treatment}
-                        onChange={(e) => setMedicalHistory({ ...medicalHistory, treatment: e.target.value })}
-                        placeholder="Describe treatment plan"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Additional Notes</Label>
-                      <Textarea
-                        id="notes"
-                        value={medicalHistory.notes}
-                        onChange={(e) => setMedicalHistory({ ...medicalHistory, notes: e.target.value })}
-                        placeholder="Any additional notes"
-                      />
-                    </div>
-                    <Button type="submit" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Medical History
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent> */}
 
             {/* Lab Results Tab */}
             <TabsContent value="lab-results">

@@ -69,6 +69,40 @@ export interface Patient {
   lastVisit: string;
 }
 
+export interface LabResults {
+  testName: string;
+  result: string;
+  normalRange: string;
+  notes: string;
+}
+
+export interface Medication {
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+}
+
+export interface Vitals {
+  bloodPressure: string;
+  heartRate: string;
+  temperature: string;
+  weight: string;
+  height: string;
+}
+
+export interface HealthRecord {
+  id: string;
+  appointment_id: string;
+  patient_id: string;
+  provider_id: string;
+  record_type: 'lab_results' | 'medication' | 'vitals';
+  data: LabResults | Medication | Vitals;
+  created_at: string;
+  updated_at: string;
+}
+
 // DTO for /api/appointments/book
 export type BookAppointmentRequestDTO = {
   date_time: string;
@@ -133,4 +167,10 @@ export type DoctorPatientsResponseDTO = {
 export type ReceptionistDashboardDetails = {
   result_code: number;
   data: ReceptionistData[];
+};
+
+// Dto for /api/health-records
+export type HealthRecordResponseDTO = {
+  result_code: number;
+  health_record: HealthRecord;
 };

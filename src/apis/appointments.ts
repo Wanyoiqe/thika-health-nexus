@@ -77,3 +77,13 @@ export const getAvailableDoctors = async (from: string, to: string) => {
     throw new Error(error.response?.data?.message || 'Failed to fetch available doctors');
   }
 };
+
+// Get appointments for a specific patient
+export const getPatientAppointments = async (token: string, patientId: string) => {
+  try {
+    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>(`/api/healthrecords/patient-appointments/${patientId}`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch patient appointments');
+  }
+};
