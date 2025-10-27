@@ -5,26 +5,27 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
-import { 
-  getConsentRequests, 
-  getActiveConsents, 
-  handleConsentRequest as handleConsentAPI, 
-  revokeConsent as revokeConsentAPI,
-  type ConsentRequest,
-  type ActiveConsent
-} from '@/apis/consent';
+import { getConsentRequests,  } from '@/apis/consent';
+import { ConsentRequest,  } from '@/types';
+import { useAuth } from '@/AuthContext';
 
 const ConsentManagement: React.FC = () => {
   const [consentRequests, setConsentRequests] = useState<ConsentRequest[]>([]);
-  const [activeConsents, setActiveConsents] = useState<ActiveConsent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  let { refreshToken } = useAuth();
+  refreshToken = localStorage.getItem('refreshToken')!;
+
+  const approvedRequests = consentRequests.filter(request => request.status === 'approved');
+  const pendingRequests = consentRequests.filter(request => request.status === 'pending');
+  const rejectedRequests = consentRequests.filter(request => request.status === 'denied');
+
 
   const fetchConsentRequests = async () => {
     try {
       setError(null);
-      const data = await getConsentRequests();
+      const data = await getConsentRequests(refreshToken!);
       // Ensure we always set an array, even if the API returns null or undefined
       setConsentRequests(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -40,25 +41,6 @@ const ConsentManagement: React.FC = () => {
     }
   };
 
-  const fetchActiveConsents = async () => {
-    try {
-      setError(null);
-      const data = await getActiveConsents();
-      // Ensure we always set an array, even if the API returns null or undefined
-      setActiveConsents(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching active consents:', error);
-      setError('Failed to fetch active consents');
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch active consents',
-        variant: 'destructive',
-      });
-      // Set empty array on error to prevent mapping issues
-      setActiveConsents([]);
-    }
-  };
-
   const handleConsentAction = async (requestId: string, action: 'approve' | 'deny') => {
     try {
       // Mock API call
@@ -66,7 +48,7 @@ const ConsentManagement: React.FC = () => {
         title: 'Success',
         description: `Request ${action}ed successfully`,
       });
-      await Promise.all([fetchConsentRequests(), fetchActiveConsents()]);
+      await Promise.all([fetchConsentRequests()]);
     } catch (error) {
       toast({
         title: 'Error',
@@ -83,7 +65,7 @@ const ConsentManagement: React.FC = () => {
         title: 'Success',
         description: 'Access revoked successfully',
       });
-      await fetchActiveConsents();
+      await fetchConsentRequests();
     } catch (error) {
       toast({
         title: 'Error',
@@ -100,7 +82,7 @@ const ConsentManagement: React.FC = () => {
       try {
         await Promise.all([
           fetchConsentRequests(),
-          fetchActiveConsents()
+          // fetchActiveConsents()
         ]);
       } catch (error) {
         console.error('Error loading consent data:', error);
@@ -177,8 +159,8 @@ const ConsentManagement: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <h4 className="font-medium">{request.doctorName}</h4>
-                        <Badge variant="outline">{request.specialization}</Badge>
+                        <h4 className="font-medium">{request.patient_name}</h4>
+                        <Badge variant="outline">{request.type}</Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -202,7 +184,7 @@ const ConsentManagement: React.FC = () => {
                     <div className="text-sm text-muted-foreground">
                       <p className="line-clamp-2">{request.purpose}</p>
                       <p className="mt-1">
-                        Requested on: {new Date(request.requestDate).toLocaleDateString()}
+                        Requested on: {new Date(request.request_date).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -222,20 +204,20 @@ const ConsentManagement: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {activeConsents.length === 0 ? (
+              {approvedRequests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No active consents</p>
                 </div>
               ) : (
-                activeConsents.map((consent) => (
+                approvedRequests.map((consent) => (
                   <div
                     key={consent.id}
                     className="flex flex-col space-y-3 p-4 bg-muted/50 rounded-lg transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <h4 className="font-medium">{consent.doctorName}</h4>
-                        <Badge variant="outline">{consent.specialization}</Badge>
+                        <h4 className="font-medium">{consent.patient_name}</h4>
+                        <Badge variant="outline">{consent.patient_name}</Badge>
                       </div>
                       <Button
                         size="sm"
@@ -248,11 +230,11 @@ const ConsentManagement: React.FC = () => {
                     </div>
                     <div className="text-sm text-muted-foreground">
                       <p>
-                        Granted: {new Date(consent.grantedDate).toLocaleDateString()}
+                        {consent.request_date}
                       </p>
-                      <p>
+                      {/* <p>
                         Expires: {new Date(consent.expiryDate).toLocaleDateString()}
-                      </p>
+                      </p> */}
                     </div>
                   </div>
                 ))

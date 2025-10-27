@@ -17,6 +17,7 @@ import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import DoctorHealthRecords from './pages/doctor/DoctorHealthRecords';
 import DoctorConsent from './pages/doctor/DoctorConsent';
 import DoctorNotifications from './pages/doctor/DoctorNotifications';
+import PatientProfile from "./pages/PatientProfile";
 import { AuthProvider } from './AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { Toaster as ShadcnToaster } from '@/components/ui/toaster';
@@ -75,6 +76,7 @@ const App: React.FC = () => {
         <Route path="/doctor/consent" element={<DoctorConsent />} />
         <Route path="/doctor/notifications" element={<DoctorNotifications />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/profile" element={<PatientProfile />} />
 
         <Route path="*" element={<NotFound />} />
 
