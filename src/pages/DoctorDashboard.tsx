@@ -23,79 +23,65 @@ import { useAuth } from '@/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-
-interface Appointment {
-  app_id: string;
-  date_time: string;
-  patient?: {
-    firstName: string;
-    lastName: string;
-    id: string;
-  };
-  status: 'scheduled' | 'completed' | 'cancelled';
-}
-
-interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  age: number;
-  gender: string;
-  lastVisit?: string;
-}
-
-interface ConsentRequest {
-  id: string;
-  patient_name: string;
-  request_date: string;
-  status: 'pending' | 'approved' | 'denied';
-  type: string;
-}
+import { getUpcomingAppointments } from '@/apis/appointments';
+import { fetchDoctorsPatients } from '@/apis/providers';
+import { getConsentRequests } from '@/apis/consent';
+import type { Appointment, Patient, ConsentRequest } from '@/types';
 
 const DoctorDashboard: React.FC = () => {
-  const { user, refreshToken } = useAuth();
+  const { user } = useAuth();
+  let { refreshToken } = useAuth();
   const navigate = useNavigate();
-  
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [consentRequests, setConsentRequests] = useState<ConsentRequest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data for demonstration
   useEffect(() => {
-    // In production, fetch real data from your backend
-    setAppointments([
-      {
-        app_id: '1',
-        date_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-        patient: { firstName: 'John', lastName: 'Doe', id: '1' },
-        status: 'scheduled'
-      },
-      {
-        app_id: '2',
-        date_time: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
-        patient: { firstName: 'Jane', lastName: 'Smith', id: '2' },
-        status: 'scheduled'
+    if (refreshToken === null) {
+      refreshToken = localStorage.getItem('refreshToken')!;
+    }
+    if (user && refreshToken) {
+      fetchDashboardData(refreshToken);
+    }
+  }, [user]);
+
+  const fetchDashboardData = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const [appointmentsRes, patientsRes, consentsRes] = await Promise.allSettled([
+        getUpcomingAppointments(token),
+        fetchDoctorsPatients(token),
+        getConsentRequests(token),
+      ]);
+
+      if (appointmentsRes.status === 'fulfilled') {
+        setAppointments(appointmentsRes.value.appointments);
       }
-    ]);
+      if (patientsRes.status === 'fulfilled') {
+        setPatients(patientsRes.value.patients);
+      }
+      if (consentsRes.status === 'fulfilled' && consentsRes.value) {
+        setConsentRequests(consentsRes.value);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load dashboard data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    setPatients([
-      { id: '1', firstName: 'John', lastName: 'Doe', age: 45, gender: 'Male', lastVisit: '2025-10-20' },
-      { id: '2', firstName: 'Jane', lastName: 'Smith', age: 32, gender: 'Female', lastVisit: '2025-10-21' },
-      { id: '3', firstName: 'Michael', lastName: 'Johnson', age: 28, gender: 'Male', lastVisit: '2025-10-19' },
-    ]);
-
-    setConsentRequests([
-      { id: '1', patient_name: 'John Doe', request_date: '2025-10-22', status: 'pending', type: 'Medical History' },
-      { id: '2', patient_name: 'Jane Smith', request_date: '2025-10-21', status: 'approved', type: 'Lab Results' },
-    ]);
-  }, []);
-
+  const today = new Date().toDateString();
   const stats = [
     { label: 'Total Patients', value: patients.length, icon: Users, color: 'text-primary' },
-    { label: "Today's Appointments", value: appointments.length, icon: Calendar, color: 'text-secondary' },
+    { label: "Upcoming Appointments", value: appointments.length, icon: Calendar, color: 'text-secondary' },
     { label: 'Pending Consents', value: consentRequests.filter(c => c.status === 'pending').length, icon: FileText, color: 'text-accent' },
-    { label: 'Completed Today', value: 0, icon: CheckCircle, color: 'text-secondary' },
+    { label: 'Completed Today', value: appointments.filter(a => a.status === 'completed' && new Date(a.date_time).toDateString() === today).length, icon: CheckCircle, color: 'text-secondary' },
   ];
 
   return (
@@ -229,17 +215,20 @@ const DoctorDashboard: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              {patients.length === 0 && !isLoading && (
+                <p className="text-center text-muted-foreground py-8">No patients found</p>
+              )}
               {patients.slice(0, 3).map((patient) => (
-                <div key={patient.id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer">
+                <div key={patient.patient_id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer">
                   <Avatar className="h-12 w-12">
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {patient.firstName[0]}{patient.lastName[0]}
+                      {patient.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold">{patient.firstName} {patient.lastName}</h4>
+                    <h4 className="font-semibold">{patient.full_name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {patient.age} yrs • {patient.gender}
+                      {patient.totalVisits} visit{patient.totalVisits !== 1 ? 's' : ''} • Last: {patient.lastVisit ? format(new Date(patient.lastVisit), 'MMM dd, yyyy') : 'N/A'}
                     </p>
                   </div>
                   <Button variant="outline" size="sm">

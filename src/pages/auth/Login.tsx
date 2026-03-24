@@ -103,7 +103,7 @@ const Login: React.FC = () => {
           </div>
           <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>
-            Sign in to access your Thika Health Records
+            Sign in to access your Tiba Hospital Records
           </CardDescription>
         </CardHeader>
 

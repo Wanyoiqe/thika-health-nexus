@@ -37,7 +37,7 @@ const getDashboardLink = (role?: string) => {
     case 'receptionist':
       return '/receptionist/dashboard';
     case 'provider':  // Covers both 'provider' and mapped 'doctor'
-      return '/provider/dashboard';  // Or '/doctor/dashboard' if you prefer
+      return '/doctor/dashboard';  // Or '/doctor/dashboard' if you prefer
     case 'patient':
       return '/patient/dashboard';
     default:
@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
             T
           </div>
           <span className="font-semibold text-lg">
-            Thika Health
+            Tiba Hospital
           </span>
         </div>
       </div>

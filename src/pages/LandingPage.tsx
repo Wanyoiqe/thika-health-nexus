@@ -14,7 +14,7 @@ const LandingPage: React.FC = () => {
             <div className="w-10 h-10 rounded-full bg-healthcare-primary flex items-center justify-center text-white font-bold">
               T
             </div>
-            <span className="font-bold text-xl">Thika Health</span>
+            <span className="font-bold text-xl">Tiba Hospital</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-6">
@@ -216,7 +216,7 @@ const LandingPage: React.FC = () => {
                 <div className="w-10 h-10 rounded-full bg-healthcare-primary flex items-center justify-center text-white font-bold">
                   T
                 </div>
-                <span className="font-bold text-xl text-white">Thika Health</span>
+                <span className="font-bold text-xl text-white">Tiba Hospital</span>
               </div>
               <p className="mb-4 max-w-md">
                 Secure, integrated health records management for healthcare providers and patients in Thika, Kenya.

@@ -12,12 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/AuthContext";
 
 interface NavbarProps {
   onMenuClick: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
+  const { user } = useAuth();
+
+  const initials = `${user?.firstName?.charAt(0) || ''}${user?.lastName?.charAt(0) || ''}`.toUpperCase();
+    
   const handleLogout = () => {
     // Clear user data from localStorage
     localStorage.removeItem('user');
@@ -40,7 +45,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
               T
             </div>
             <span className="font-semibold text-lg hidden md:inline-block">
-              Thika Health
+              Tiba Hospital
             </span>
           </Link>
         </div>
@@ -68,7 +73,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <div className="h-8 w-8 rounded-full bg-healthcare-accent flex items-center justify-center text-white">
-                  DR
+                  {initials}
                 </div>
               </Button>
             </DropdownMenuTrigger>

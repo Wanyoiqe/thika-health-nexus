@@ -21,7 +21,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
             <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center">
               <Shield className="h-6 w-6 text-healthcare-primary" />
             </div>
-            <h1 className="text-white text-2xl font-bold">Thika Health</h1>
+            <h1 className="text-white text-2xl font-bold">Tiba Hospital</h1>
           </Link>
           
           <div className="mt-12 mb-8">

@@ -87,3 +87,44 @@ export const getPatientAppointments = async (token: string, patientId: string) =
     throw new Error(error.response?.data?.message || 'Failed to fetch patient appointments');
   }
 };
+
+// Doctor-scoped appointment endpoints
+export const getDoctorAllAppointments = async (token: string) => {
+  try {
+    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>('/api/appointments/doctor/all');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch doctor appointments');
+  }
+};
+
+export const getDoctorUpcomingAppointments = async (token: string) => {
+  try {
+    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>('/api/appointments/doctor/upcoming');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch upcoming appointments');
+  }
+};
+
+export const getDoctorPastAppointments = async (token: string) => {
+  try {
+    const response = await privateAPIUtil(token).get<getAllAppointmentsDTO>('/api/appointments/doctor/past');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch past appointments');
+  }
+};
+
+export const updateAppointmentStatus = async (
+  token: string,
+  appId: string,
+  status: 'completed' | 'cancelled'
+) => {
+  try {
+    const response = await privateAPIUtil(token).patch(`/api/appointments/${appId}/status`, { status });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to update appointment status');
+  }
+};

@@ -1,147 +1,137 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, MapPin, Phone, CheckCircle, XCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Calendar,
+  Clock,
+  Phone,
+  CheckCircle,
+  XCircle,
+  Search,
+  Users,
+} from 'lucide-react';
+import { format, isToday, isTomorrow, isThisWeek } from 'date-fns';
+import { useAuth } from '@/AuthContext';
+import { getDoctorAllAppointments, updateAppointmentStatus } from '@/apis/appointments';
+import { toast } from '@/hooks/use-toast';
+import type { Appointment } from '@/types';
 
-interface Appointment {
-  app_id: string;
-  date_time: string;
-  patient?: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    id: string;
-  };
-  status: 'scheduled' | 'completed' | 'cancelled';
-  type: string;
-  notes?: string;
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const formatRelativeDate = (dateStr: string) => {
+  const d = new Date(dateStr);
+  if (isToday(d)) return 'Today';
+  if (isTomorrow(d)) return 'Tomorrow';
+  if (isThisWeek(d)) return format(d, 'EEEE'); // e.g. "Wednesday"
+  return format(d, 'MMM dd, yyyy');
+};
+
+const statusVariant = (status: string): 'default' | 'secondary' | 'destructive' => {
+  if (status === 'completed') return 'default';
+  if (status === 'cancelled') return 'destructive';
+  return 'secondary';
+};
+
+// ─── Skeleton loader ─────────────────────────────────────────────────────────
+
+const AppointmentSkeleton = () => (
+  <Card>
+    <CardContent className="p-6">
+      <div className="flex gap-4 items-center">
+        <Skeleton className="h-14 w-14 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-64" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+        <Skeleton className="h-8 w-24" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// ─── Appointment card ────────────────────────────────────────────────────────
+
+interface AppointmentCardProps {
+  appointment: Appointment;
+  onStatusChange: (appId: string, status: 'completed' | 'cancelled') => void;
+  updatingId: string | null;
 }
 
-const DoctorAppointments: React.FC = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      app_id: '1',
-      date_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      patient: { firstName: 'John', lastName: 'Doe', phone: '+254 712 345 678', id: '1' },
-      status: 'scheduled',
-      type: 'Follow-up',
-      notes: 'Blood pressure check'
-    },
-    {
-      app_id: '2',
-      date_time: new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(),
-      patient: { firstName: 'Jane', lastName: 'Smith', phone: '+254 723 456 789', id: '2' },
-      status: 'scheduled',
-      type: 'Consultation',
-      notes: 'Initial consultation'
-    },
-    {
-      app_id: '3',
-      date_time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      patient: { firstName: 'Michael', lastName: 'Johnson', phone: '+254 734 567 890', id: '3' },
-      status: 'completed',
-      type: 'Check-up',
-      notes: 'Annual physical'
-    },
-  ]);
+const AppointmentCard: React.FC<AppointmentCardProps> = ({ appointment, onStatusChange, updatingId }) => {
+  const patient = appointment.patient;
+  const initials = patient
+    ? `${patient.firstName?.[0] ?? ''}${patient.lastName?.[0] ?? ''}`.toUpperCase()
+    : '??';
+  const fullName = patient
+    ? `${patient.firstName} ${patient.lastName}`.trim()
+    : 'Unknown Patient';
+  const isUpdating = updatingId === appointment.app_id;
 
-  const upcomingAppointments = appointments.filter(a => a.status === 'scheduled');
-  const completedAppointments = appointments.filter(a => a.status === 'completed');
-  const cancelledAppointments = appointments.filter(a => a.status === 'cancelled');
-
-  const handleCompleteAppointment = (appointmentId: string) => {
-    setAppointments(prev =>
-      prev.map(appt =>
-        appt.app_id === appointmentId ? { ...appt, status: 'completed' as const } : appt
-      )
-    );
-  };
-
-  const handleCancelAppointment = (appointmentId: string) => {
-    setAppointments(prev =>
-      prev.map(appt =>
-        appt.app_id === appointmentId ? { ...appt, status: 'cancelled' as const } : appt
-      )
-    );
-  };
-
-  const AppointmentCard = ({ appointment }: { appointment: Appointment }) => (
+  return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-              {appointment.patient ? `${appointment.patient.firstName[0]}${appointment.patient.lastName[0]}` : 'NA'}
+      <CardContent className="p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* Avatar */}
+          <Avatar className="h-14 w-14 shrink-0">
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-base">
+              {initials}
             </AvatarFallback>
           </Avatar>
 
-          <div className="flex-1 space-y-3">
-            <div>
-              <h3 className="text-lg font-semibold">
-                {appointment.patient ? `${appointment.patient.firstName} ${appointment.patient.lastName}` : 'Unknown Patient'}
-              </h3>
-              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{format(new Date(appointment.date_time), 'MMMM dd, yyyy')}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{format(new Date(appointment.date_time), 'h:mm aa')}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Phone className="h-4 w-4" />
-                  <span>{appointment.patient?.phone}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>Thika Health Center</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{appointment.type}</Badge>
-              <Badge 
-                variant={
-                  appointment.status === 'completed' ? 'default' :
-                  appointment.status === 'cancelled' ? 'destructive' :
-                  'secondary'
-                }
-              >
+          {/* Details */}
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold text-base">{fullName}</h3>
+              <Badge variant={statusVariant(appointment.status)} className="capitalize text-xs">
                 {appointment.status}
               </Badge>
             </div>
 
-            {appointment.notes && (
-              <p className="text-sm text-muted-foreground">
-                Notes: {appointment.notes}
-              </p>
-            )}
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {formatRelativeDate(appointment.date_time)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {format(new Date(appointment.date_time), 'h:mm aa')}
+              </span>
+              {patient?.phone && (
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  {patient.phone}
+                </span>
+              )}
+            </div>
           </div>
 
+          {/* Actions — only for scheduled */}
           {appointment.status === 'scheduled' && (
-            <div className="flex flex-col gap-2">
-              <Button 
-                size="sm" 
-                className="gap-2"
-                onClick={() => handleCompleteAppointment(appointment.app_id)}
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={isUpdating}
+                onClick={() => onStatusChange(appointment.app_id, 'completed')}
               >
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-3.5 w-3.5" />
                 Complete
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
-                className="gap-2"
-                onClick={() => handleCancelAppointment(appointment.app_id)}
+                className="gap-1.5"
+                disabled={isUpdating}
+                onClick={() => onStatusChange(appointment.app_id, 'cancelled')}
               >
-                <XCircle className="h-4 w-4" />
+                <XCircle className="h-3.5 w-3.5" />
                 Cancel
               </Button>
             </div>
@@ -150,94 +140,170 @@ const DoctorAppointments: React.FC = () => {
       </CardContent>
     </Card>
   );
+};
+
+// ─── Empty state ─────────────────────────────────────────────────────────────
+
+const EmptyState = ({ icon: Icon, message }: { icon: React.ElementType; message: string }) => (
+  <Card>
+    <CardContent className="py-16 text-center">
+      <Icon className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+      <p className="text-muted-foreground">{message}</p>
+    </CardContent>
+  </Card>
+);
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+const DoctorAppointments: React.FC = () => {
+  const { user } = useAuth();
+  let { refreshToken } = useAuth();
+
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (refreshToken === null) {
+      refreshToken = localStorage.getItem('refreshToken')!;
+    }
+    if (user && refreshToken) {
+      fetchAppointments(refreshToken);
+    }
+  }, [user]);
+
+  const fetchAppointments = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const res = await getDoctorAllAppointments(token);
+      setAppointments(res.appointments);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load appointments',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (appId: string, status: 'completed' | 'cancelled') => {
+    const token = refreshToken || localStorage.getItem('refreshToken')!;
+    setUpdatingId(appId);
+    try {
+      await updateAppointmentStatus(token, appId, status);
+      setAppointments(prev =>
+        prev.map(a => a.app_id === appId ? { ...a, status } : a)
+      );
+      toast({ title: 'Updated', description: `Appointment marked as ${status}.` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // Filter by patient name search
+  const filtered = useMemo(() => {
+    if (!search.trim()) return appointments;
+    const q = search.toLowerCase();
+    return appointments.filter(a => {
+      const name = a.patient
+        ? `${a.patient.firstName} ${a.patient.lastName}`.toLowerCase()
+        : '';
+      return name.includes(q);
+    });
+  }, [appointments, search]);
+
+  const upcoming = filtered.filter(a => a.status === 'scheduled');
+  const completed = filtered.filter(a => a.status === 'completed');
+  const cancelled = filtered.filter(a => a.status === 'cancelled');
+
+  const renderList = (
+    list: Appointment[],
+    emptyIcon: React.ElementType,
+    emptyMsg: string
+  ) => {
+    if (isLoading) return [1, 2, 3].map(i => <AppointmentSkeleton key={i} />);
+    if (!list.length) return <EmptyState icon={emptyIcon} message={emptyMsg} />;
+    return list.map(a => (
+      <AppointmentCard
+        key={a.app_id}
+        appointment={a}
+        onStatusChange={handleStatusChange}
+        updatingId={updatingId}
+      />
+    ));
+  };
 
   return (
     <MainLayout>
       <div className="space-y-6 container mx-auto px-4 py-8">
+
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Appointments</h1>
-          <p className="text-muted-foreground mt-1">Manage your patient appointments</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold">Appointments</h1>
+            <p className="text-muted-foreground mt-1">Manage your patient appointments</p>
+          </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold">{upcomingAppointments.length}</div>
-              <p className="text-sm text-muted-foreground">Upcoming</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold">{completedAppointments.length}</div>
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-2xl font-bold">{cancelledAppointments.length}</div>
-              <p className="text-sm text-muted-foreground">Cancelled</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'Upcoming', value: upcoming.length, color: 'text-primary' },
+            { label: 'Completed', value: completed.length, color: 'text-secondary' },
+            { label: 'Cancelled', value: cancelled.length, color: 'text-destructive' },
+          ].map(stat => (
+            <Card key={stat.label}>
+              <CardContent className="p-5">
+                <p className={`text-3xl font-bold ${stat.color}`}>{isLoading ? '—' : stat.value}</p>
+                <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Appointments Tabs */}
-        <Tabs defaultValue="upcoming" className="w-full">
-          <TabsList className="grid w-full md:w-auto grid-cols-3">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+        {/* Search */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by patient name..."
+            className="pl-9"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="upcoming">
+          <TabsList className="grid w-full sm:w-auto grid-cols-3">
+            <TabsTrigger value="upcoming">
+              Upcoming {!isLoading && <span className="ml-1.5 text-xs opacity-60">({upcoming.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Completed {!isLoading && <span className="ml-1.5 text-xs opacity-60">({completed.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="cancelled">
+              Cancelled {!isLoading && <span className="ml-1.5 text-xs opacity-60">({cancelled.length})</span>}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upcoming" className="space-y-4 mt-6">
-            {upcomingAppointments.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No upcoming appointments</h3>
-                  <p className="text-muted-foreground">Your schedule is clear</p>
-                </CardContent>
-              </Card>
-            ) : (
-              upcomingAppointments.map(appointment => (
-                <AppointmentCard key={appointment.app_id} appointment={appointment} />
-              ))
-            )}
+          <TabsContent value="upcoming" className="space-y-3 mt-6">
+            {renderList(upcoming, Calendar, 'No upcoming appointments — your schedule is clear')}
           </TabsContent>
 
-          <TabsContent value="completed" className="space-y-4 mt-6">
-            {completedAppointments.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No completed appointments</h3>
-                  <p className="text-muted-foreground">Completed appointments will appear here</p>
-                </CardContent>
-              </Card>
-            ) : (
-              completedAppointments.map(appointment => (
-                <AppointmentCard key={appointment.app_id} appointment={appointment} />
-              ))
-            )}
+          <TabsContent value="completed" className="space-y-3 mt-6">
+            {renderList(completed, CheckCircle, 'No completed appointments yet')}
           </TabsContent>
 
-          <TabsContent value="cancelled" className="space-y-4 mt-6">
-            {cancelledAppointments.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <XCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No cancelled appointments</h3>
-                  <p className="text-muted-foreground">Cancelled appointments will appear here</p>
-                </CardContent>
-              </Card>
-            ) : (
-              cancelledAppointments.map(appointment => (
-                <AppointmentCard key={appointment.app_id} appointment={appointment} />
-              ))
-            )}
+          <TabsContent value="cancelled" className="space-y-3 mt-6">
+            {renderList(cancelled, XCircle, 'No cancelled appointments')}
           </TabsContent>
         </Tabs>
+
       </div>
     </MainLayout>
   );

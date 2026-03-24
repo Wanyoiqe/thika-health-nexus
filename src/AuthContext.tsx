@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState } from 'react';
 import Cookies from 'js-cookie';
 import { register, login, fetchUserProfile } from './apis/auth';
 import type { LoginResponse } from './types';
@@ -30,49 +30,36 @@ export type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string>('');
-
-  // Helper to transform backend/snake_case data to User shape
-  const transformToUser = (data: any): User | null => {
-    if (!data || typeof data !== 'object') return null;
-
-    // Map role: treat 'doctor' as 'provider' for frontend logic
-    const role = data.role === 'doctor' ? 'provider' : data.role;
-
-    return {
-      id: data.user_id || data.id,
-      firstName: data.first_name || data.firstName || '',
-      lastName: data.last_name || data.lastName || '',
-      email: data.email || '',
-      phone: data.phone_number || data.phone || '',
-      role: role as User['role'],
-    };
+// Defined outside component so it can be used in lazy state initializers
+const transformToUser = (data: any): User | null => {
+  if (!data || typeof data !== 'object') return null;
+  const role = data.role === 'doctor' ? 'provider' : data.role;
+  return {
+    id: data.user_id || data.id,
+    firstName: data.first_name || data.firstName || '',
+    lastName: data.last_name || data.lastName || '',
+    email: data.email || '',
+    phone: data.phone_number || data.phone || '',
+    role: role as User['role'],
   };
+};
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        const transformedUser = transformToUser(parsed);
-        if (transformedUser) {
-          setUser(transformedUser);
-        } else {
-          console.warn('Invalid stored user data, clearing localStorage');
-          localStorage.removeItem('user');
-        }
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('user');
-      }
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // Lazy initializers — read from storage synchronously before first render
+  // This prevents the empty-state flash that caused data to not load on refresh
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) return transformToUser(JSON.parse(stored));
+    } catch {
+      localStorage.removeItem('user');
     }
-    const storedToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
-    if (storedToken) {
-      setRefreshToken(storedToken);
-    }
-  }, []);
+    return null;
+  });
+
+  const [refreshToken, setRefreshToken] = useState<string>(
+    () => Cookies.get('refreshToken') || localStorage.getItem('refreshToken') || ''
+  );
 
   const refreshUser = async () => {
     try {

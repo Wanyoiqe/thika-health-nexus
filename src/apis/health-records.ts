@@ -1,5 +1,20 @@
 import { privateAPIUtil } from './appointments';
-import type { LabResults, Medication, Vitals,HealthRecord,HealthRecordResponseDTO, DoctorHealthRecordsResponseDTO, CreateConsentRequest } from '../types';  
+import type { LabResults, Medication, Vitals, HealthRecord, HealthRecordResponseDTO, DoctorHealthRecordsResponseDTO, CreateConsentRequest } from '../types';
+
+export type MyHealthRecordsResponseDTO = {
+  result_code: number;
+  health_records: HealthRecord[];
+};
+
+// Get authenticated patient's own health records
+export const getMyHealthRecords = async (token: string) => {
+  try {
+    const response = await privateAPIUtil(token).get<MyHealthRecordsResponseDTO>('/api/healthrecords/me');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch health records');
+  }
+};  
 
 // Fetch health record by appointment ID
 export const getHealthRecordByAppointment = async (token: string, appointmentId: string, patientId: string) => {

@@ -32,6 +32,13 @@ export type Appointment = {
     profileUrl?: string | null;
     hospital_id?: string | null;
   };
+  // Populated when fetched from a doctor-role context
+  patient?: {
+    user_id: string;
+    firstName: string;
+    lastName: string;
+    phone?:string;
+  };
   status: 'scheduled' | 'completed' | 'cancelled';
 };
 

@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Search, Calendar, Clock, MapPin, Activity, AlertCircle } from 'lucide-react';
+import { Search, Calendar, Clock, Activity, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/AuthContext';
-import { getUpcomingAppointments } from '@/apis/appointments';
+import { getUpcomingAppointments, getPastAppointments } from '@/apis/appointments';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -31,6 +31,7 @@ const PatientDashboard: React.FC = () => {
   let {refreshToken} = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const PatientDashboard: React.FC = () => {
     }
     if (user && refreshToken) {
       fetchUpcomingAppointments();
+      fetchPastAppointments();
     }
   }, [user]);
 
@@ -56,6 +58,19 @@ const PatientDashboard: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPastAppointments = async () => {
+    try {
+      const response = await getPastAppointments(refreshToken);
+      setPastAppointments(response.appointments);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch recent activity',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -130,10 +145,7 @@ const PatientDashboard: React.FC = () => {
                         <Clock className="h-4 w-4 text-primary" />
                         <span>{format(new Date(appt.date_time), 'h:mm aa')}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        <span>Thika Health Center</span>
-                      </div>
+                      {/* TODO: include hospital.name in appointment response from backend */}
                     </div>
                   </div>
                 </div>
@@ -154,25 +166,32 @@ const PatientDashboard: React.FC = () => {
               <CardDescription>Latest updates to your health records</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {[
-                { name: 'Dr. John Mwangi', specialty: 'Cardiologist', update: 'Added new lab results' },
-                { name: 'Dr. Mary Njeri', specialty: 'Dermatologist', update: 'Updated prescription' },
-                { name: 'Dr. Peter Ochieng', specialty: 'Orthopedic', update: 'Completed consultation notes' },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              {pastAppointments.length === 0 && (
+                <p className="text-muted-foreground text-sm">No recent activity.</p>
+              )}
+              {pastAppointments.slice(0, 3).map((appt) => (
+                <div key={appt.app_id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-secondary text-secondary-foreground">
-                      {activity.name.split(' ').map(n => n[0]).join('')}
+                      {appt.provider
+                        ? `${appt.provider.firstName[0]}${appt.provider.lastName[0]}`
+                        : 'N/A'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-medium text-sm">{activity.name}</h5>
-                    <p className="text-xs text-muted-foreground">{activity.specialty}</p>
-                    <p className="text-xs text-foreground mt-0.5">{activity.update}</p>
+                    <h5 className="font-medium text-sm">
+                      {appt.provider
+                        ? `Dr. ${appt.provider.firstName} ${appt.provider.lastName}`
+                        : 'Unknown Provider'}
+                    </h5>
+                    <p className="text-xs text-muted-foreground">{appt.provider?.specialization || 'N/A'}</p>
+                    <p className="text-xs text-foreground mt-0.5">
+                      Visited on {format(new Date(appt.date_time), 'MMM dd, yyyy')}
+                    </p>
                   </div>
                 </div>
               ))}
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleViewAllAppointments}>
                 View All Activity
               </Button>
             </CardContent>

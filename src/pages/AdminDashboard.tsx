@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,53 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, UserCog, Activity, Settings, Shield, TrendingUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/AuthContext";
+import { fetchReceptionistDashboardDetails } from "@/apis/providers";
+import { fetchAllDoctors } from "@/apis/auth";
+import type { ReceptionistData, Doctor } from "@/types";
 
 const AdminDashboard: React.FC = () => {
+  const { user } = useAuth();
+  let { refreshToken } = useAuth();
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState("");
+  const [stats, setStats] = useState<ReceptionistData | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (refreshToken === null) {
+      refreshToken = localStorage.getItem('refreshToken')!;
+    }
+    if (user && refreshToken) {
+      fetchAdminData(refreshToken);
+    }
+  }, [user]);
+
+  const fetchAdminData = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const [statsRes, doctorsRes] = await Promise.allSettled([
+        fetchReceptionistDashboardDetails(token),
+        fetchAllDoctors(token),
+      ]);
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value.data as unknown as ReceptionistData);
+      }
+      if (doctorsRes.status === 'fulfilled') {
+        setDoctors(doctorsRes.value.doctors);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load admin dashboard data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAddUser = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,39 +104,26 @@ const AdminDashboard: React.FC = () => {
           <Card className="healthcare-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Users
+                Total Patients
               </CardTitle>
               <Users className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,248</div>
-              <p className="text-xs text-muted-foreground mt-1">+18% from last month</p>
+              <div className="text-2xl font-bold">{isLoading ? '—' : (stats?.patientCount ?? '—')}</div>
+              <p className="text-xs text-muted-foreground mt-1">Registered patients</p>
             </CardContent>
           </Card>
 
           <Card className="healthcare-card">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Doctors
+                Total Staff
               </CardTitle>
               <UserCog className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">45</div>
-              <p className="text-xs text-muted-foreground mt-1">Across 6 specializations</p>
-            </CardContent>
-          </Card>
-
-          <Card className="healthcare-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                System Activity
-              </CardTitle>
-              <Activity className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">89%</div>
-              <p className="text-xs text-muted-foreground mt-1">Server uptime</p>
+              <div className="text-2xl font-bold">{isLoading ? '—' : (stats?.staffCount ?? '—')}</div>
+              <p className="text-xs text-muted-foreground mt-1">Doctors &amp; receptionists</p>
             </CardContent>
           </Card>
 
@@ -102,11 +132,24 @@ const AdminDashboard: React.FC = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Appointments Today
               </CardTitle>
+              <Activity className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{isLoading ? '—' : (stats?.appointmentCountToday ?? '—')}</div>
+              <p className="text-xs text-muted-foreground mt-1">Scheduled for today</p>
+            </CardContent>
+          </Card>
+
+          <Card className="healthcare-card">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Appointments
+              </CardTitle>
               <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">324</div>
-              <p className="text-xs text-muted-foreground mt-1">12 pending confirmations</p>
+              <div className="text-2xl font-bold">{isLoading ? '—' : (stats?.appointmentCount ?? '—')}</div>
+              <p className="text-xs text-muted-foreground mt-1">All time</p>
             </CardContent>
           </Card>
         </div>
@@ -175,30 +218,28 @@ const AdminDashboard: React.FC = () => {
             <Card className="healthcare-card">
               <CardContent className="pt-6">
                 <div className="space-y-4">
-                  {[
-                    { id: "U001", name: "Dr. Sarah Johnson", role: "Doctor", specialization: "Cardiology", status: "Active" },
-                    { id: "U002", name: "Michael Chen", role: "Receptionist", specialization: "N/A", status: "Active" },
-                    { id: "U003", name: "Emma Wilson", role: "Doctor", specialization: "Pediatrics", status: "Active" },
-                    { id: "U004", name: "James Brown", role: "Patient", specialization: "N/A", status: "Active" },
-                  ].map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {user.role} {user.specialization !== "N/A" && `• ${user.specialization}`}
-                          </p>
-                        </div>
+                  {isLoading && <p className="text-muted-foreground text-sm">Loading...</p>}
+                  {!isLoading && doctors.length === 0 && (
+                    <p className="text-muted-foreground text-sm">No doctors found.</p>
+                  )}
+                  {doctors.map((doctor) => (
+                    <div key={doctor.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{doctor.full_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Doctor • {doctor.specialization}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{doctor.email}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs bg-secondary/20 text-secondary px-2 py-1 rounded">
-                          {user.status}
+                          Active
                         </span>
                         <Button variant="outline" size="sm">Edit</Button>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           size="sm"
-                          onClick={() => handleRemoveUser(user.id, user.name)}
+                          onClick={() => handleRemoveUser(doctor.id, doctor.full_name)}
                         >
                           Remove
                         </Button>
@@ -212,71 +253,26 @@ const AdminDashboard: React.FC = () => {
 
           <TabsContent value="activity" className="space-y-4">
             <h2 className="text-xl font-semibold">Recent System Activity</h2>
+            {/* TODO: wire to GET /api/admin/audit-logs once backend endpoint is available */}
             <Card className="healthcare-card">
               <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {[
-                    { time: "10 minutes ago", action: "New patient registered", user: "Reception Desk 1", type: "info" },
-                    { time: "25 minutes ago", action: "Appointment scheduled", user: "Dr. Sarah Johnson", type: "success" },
-                    { time: "1 hour ago", action: "Health record updated", user: "Dr. Michael Chen", type: "info" },
-                    { time: "2 hours ago", action: "Consent request approved", user: "Patient John Doe", type: "success" },
-                    { time: "3 hours ago", action: "Failed login attempt", user: "Unknown", type: "warning" },
-                  ].map((activity, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{activity.action}</p>
-                        <p className="text-sm text-muted-foreground">By: {activity.user}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">{activity.time}</p>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          activity.type === 'success' ? 'bg-secondary/20 text-secondary' :
-                          activity.type === 'warning' ? 'bg-destructive/20 text-destructive' :
-                          'bg-primary/20 text-primary'
-                        }`}>
-                          {activity.type}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-muted-foreground text-sm text-center py-8">
+                  Audit log endpoint not yet available. Pending backend implementation.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="specializations" className="space-y-4">
             <h2 className="text-xl font-semibold">Medical Specializations</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { name: "Cardiology", doctors: 8, patients: 245, color: "bg-red-100 text-red-700" },
-                { name: "Pediatrics", doctors: 12, patients: 432, color: "bg-blue-100 text-blue-700" },
-                { name: "Dermatology", doctors: 5, patients: 178, color: "bg-green-100 text-green-700" },
-                { name: "Orthopedics", doctors: 7, patients: 312, color: "bg-yellow-100 text-yellow-700" },
-                { name: "Neurology", doctors: 6, patients: 189, color: "bg-purple-100 text-purple-700" },
-                { name: "General Practice", doctors: 15, patients: 678, color: "bg-gray-100 text-gray-700" },
-              ].map((spec) => (
-                <Card key={spec.name} className="healthcare-card">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{spec.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Doctors:</span>
-                        <span className="font-semibold">{spec.doctors}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Patients:</span>
-                        <span className="font-semibold">{spec.patients}</span>
-                      </div>
-                      <Button variant="outline" size="sm" className="w-full mt-2">
-                        Manage
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* TODO: wire to GET /api/admin/specializations/stats once backend endpoint is available */}
+            <Card className="healthcare-card">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-sm text-center py-8">
+                  Specialization stats endpoint not yet available. Pending backend implementation.
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
