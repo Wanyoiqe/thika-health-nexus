@@ -32,7 +32,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ recentActivity }) =>
 
   return (
     <div className="space-y-4">
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle className="text-base">Quick Actions</CardTitle>
         </CardHeader>
@@ -62,7 +62,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ recentActivity }) =>
             Request Appointment
           </Button>
         </CardContent>
-      </Card>
+      </Card> */}
 
       <Card>
         <CardHeader>

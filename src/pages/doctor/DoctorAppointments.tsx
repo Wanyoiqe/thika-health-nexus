@@ -118,7 +118,8 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({ appointment, onStatus
               <Button
                 size="sm"
                 className="gap-1.5"
-                disabled={isUpdating}
+                disabled={isUpdating || new Date(appointment.date_time) > new Date()}
+                title={new Date(appointment.date_time) > new Date() ? "Appointment hasn't occurred yet" : undefined}
                 onClick={() => onStatusChange(appointment.app_id, 'completed')}
               >
                 <CheckCircle className="h-3.5 w-3.5" />

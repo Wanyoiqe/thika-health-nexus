@@ -1,205 +1,149 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Calendar, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Bell, Calendar, FileText, Clock, ShieldCheck } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/AuthContext';
+import { getNotifications, markOneRead, markAllRead } from '@/apis/notifications';
+import { useToast } from '@/hooks/use-toast';
+import type { AppNotification } from '@/types';
 
-interface Notification {
-  id: string;
-  type: 'appointment' | 'consent' | 'record' | 'system';
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  priority: 'low' | 'medium' | 'high';
-}
+const typeConfig: Record<AppNotification['type'], { icon: React.ElementType; color: string; label: string }> = {
+  appointment_booked:    { icon: Calendar,    color: 'text-primary',     label: 'Appointment' },
+  consent_approved:      { icon: ShieldCheck, color: 'text-secondary',   label: 'Consent'     },
+  consent_denied:        { icon: ShieldCheck, color: 'text-destructive', label: 'Consent'     },
+  health_record_created: { icon: FileText,    color: 'text-accent',      label: 'Record'      },
+};
+
+const NotificationSkeleton = () => (
+  <Card>
+    <CardContent className="p-5">
+      <div className="flex gap-4">
+        <Skeleton className="h-11 w-11 rounded-full shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 w-72" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const DoctorNotifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'appointment',
-      title: 'New Appointment Booked',
-      message: 'John Doe has booked an appointment for Oct 24, 2025 at 10:00 AM',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      read: false,
-      priority: 'high'
-    },
-    {
-      id: '2',
-      type: 'consent',
-      title: 'Consent Request Approved',
-      message: 'Jane Smith has approved your request to access Medical History records',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      read: false,
-      priority: 'medium'
-    },
-    {
-      id: '3',
-      type: 'record',
-      title: 'Lab Results Available',
-      message: 'New lab results are available for Michael Johnson',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'medium'
-    },
-    {
-      id: '4',
-      type: 'appointment',
-      title: 'Appointment Cancelled',
-      message: 'Sarah Williams has cancelled the appointment scheduled for Oct 23, 2025',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'low'
-    },
-    {
-      id: '5',
-      type: 'system',
-      title: 'System Update',
-      message: 'The system will undergo maintenance on Oct 25, 2025 from 2:00 AM to 4:00 AM',
-      timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-      read: true,
-      priority: 'low'
-    },
-  ]);
+  const { refreshToken } = useAuth();
+  const { toast } = useToast();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const token = refreshToken || localStorage.getItem('refreshToken') || '';
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(notif =>
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
-  };
+  useEffect(() => {
+    if (token) load();
+  }, []);
 
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notif => ({ ...notif, read: true }))
-    );
-  };
-
-  const getIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'appointment':
-        return <Calendar className="h-5 w-5" />;
-      case 'consent':
-        return <CheckCircle className="h-5 w-5" />;
-      case 'record':
-        return <FileText className="h-5 w-5" />;
-      case 'system':
-        return <AlertCircle className="h-5 w-5" />;
-      default:
-        return <Bell className="h-5 w-5" />;
+  const load = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getNotifications(token);
+      setNotifications(res.notifications);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getIconColor = (type: Notification['type']) => {
-    switch (type) {
-      case 'appointment':
-        return 'text-primary';
-      case 'consent':
-        return 'text-secondary';
-      case 'record':
-        return 'text-accent';
-      case 'system':
-        return 'text-muted-foreground';
-      default:
-        return 'text-foreground';
+  const handleMarkOne = async (id: string) => {
+    try {
+      await markOneRead(token, id);
+      setNotifications(prev => prev.map(n => n.notification_id === id ? { ...n, is_read: true } : n));
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
   };
 
-  const getPriorityBadge = (priority: Notification['priority']) => {
-    switch (priority) {
-      case 'high':
-        return <Badge variant="destructive">High Priority</Badge>;
-      case 'medium':
-        return <Badge variant="secondary">Medium</Badge>;
-      case 'low':
-        return <Badge variant="outline">Low</Badge>;
+  const handleMarkAll = async () => {
+    try {
+      await markAllRead(token);
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
   };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <MainLayout>
       <div className="space-y-6 container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Notifications</h1>
             <p className="text-muted-foreground mt-1">
-              {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up!'}
+              {isLoading ? 'Loading...' : unreadCount > 0
+                ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`
+                : 'All caught up!'}
             </p>
           </div>
           {unreadCount > 0 && (
-            <Button variant="outline" onClick={markAllAsRead}>
-              Mark All as Read
-            </Button>
+            <Button variant="outline" onClick={handleMarkAll}>Mark All as Read</Button>
           )}
         </div>
 
-        {/* Notifications List */}
         <div className="space-y-3">
-          {notifications.map((notification) => (
-            <Card 
-              key={notification.id} 
-              className={`transition-all hover:shadow-md ${!notification.read ? 'border-l-4 border-l-primary bg-primary/5' : ''}`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-full bg-muted ${getIconColor(notification.type)}`}>
-                    {getIcon(notification.type)}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold">{notification.title}</h3>
-                          {!notification.read && (
-                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                          )}
+          {isLoading
+            ? [1, 2, 3, 4].map(i => <NotificationSkeleton key={i} />)
+            : notifications.length === 0
+              ? (
+                <Card>
+                  <CardContent className="py-16 text-center">
+                    <Bell className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                    <p className="text-muted-foreground">No notifications yet. Check back later.</p>
+                  </CardContent>
+                </Card>
+              )
+              : notifications.map(notif => {
+                  const cfg = typeConfig[notif.type] ?? { icon: Bell, color: 'text-foreground', label: 'System' };
+                  const Icon = cfg.icon;
+                  return (
+                    <Card
+                      key={notif.notification_id}
+                      className={`transition-all hover:shadow-md ${!notif.is_read ? 'border-l-4 border-l-primary bg-primary/5' : ''}`}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                          <div className={`p-2.5 rounded-full bg-muted shrink-0 ${cfg.color}`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-sm">{notif.title}</h3>
+                              {!notif.is_read && <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
+                              <Badge variant="outline" className="text-xs">{cfg.label}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{notif.message}</p>
+                            <div className="flex items-center justify-between pt-1">
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                              </span>
+                              {!notif.is_read && (
+                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleMarkOne(notif.notification_id)}>
+                                  Mark as Read
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {notification.message}
-                        </p>
-                      </div>
-                      {getPriorityBadge(notification.priority)}
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{format(new Date(notification.timestamp), 'MMM dd, yyyy h:mm aa')}</span>
-                      </div>
-                      
-                      {!notification.read && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => markAsRead(notification.id)}
-                        >
-                          Mark as Read
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {notifications.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No notifications</h3>
-                <p className="text-muted-foreground">You're all caught up! Check back later for updates.</p>
-              </CardContent>
-            </Card>
-          )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+          }
         </div>
       </div>
     </MainLayout>

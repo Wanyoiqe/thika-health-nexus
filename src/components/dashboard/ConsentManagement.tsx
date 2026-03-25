@@ -1,247 +1,167 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import MainLayout from '@/components/layout/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import MainLayout from '@/components/layout/MainLayout';
-import { getConsentRequests,  } from '@/apis/consent';
-import { ConsentRequest,  } from '@/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ShieldCheck, ShieldOff, Clock, AlertCircle, History } from 'lucide-react';
+import { format } from 'date-fns';
 import { useAuth } from '@/AuthContext';
+import { getMyConsentHistory, respondToConsent, revokeConsent } from '@/apis/consent';
+import { useToast } from '@/hooks/use-toast';
+import type { ConsentItem } from '@/types';
+
+const statusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  if (status === 'approved') return 'default';
+  if (status === 'denied' || status === 'revoked') return 'destructive';
+  if (status === 'pending') return 'secondary';
+  return 'outline';
+};
+
+const ConsentSkeleton = () => (
+  <Card><CardContent className="p-5 space-y-2"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-64" /><Skeleton className="h-3 w-32" /></CardContent></Card>
+);
 
 const ConsentManagement: React.FC = () => {
-  const [consentRequests, setConsentRequests] = useState<ConsentRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { refreshToken } = useAuth();
   const { toast } = useToast();
-  let { refreshToken } = useAuth();
-  refreshToken = localStorage.getItem('refreshToken')!;
+  const [consents, setConsents] = useState<ConsentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [actingId, setActingId] = useState<string | null>(null);
 
-  const approvedRequests = consentRequests.filter(request => request.status === 'approved');
-  const pendingRequests = consentRequests.filter(request => request.status === 'pending');
-  const rejectedRequests = consentRequests.filter(request => request.status === 'denied');
-
-
-  const fetchConsentRequests = async () => {
-    try {
-      setError(null);
-      const data = await getConsentRequests(refreshToken!);
-      // Ensure we always set an array, even if the API returns null or undefined
-      setConsentRequests(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching consent requests:', error);
-      setError('Failed to fetch consent requests');
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch consent requests',
-        variant: 'destructive',
-      });
-      // Set empty array on error to prevent mapping issues
-      setConsentRequests([]);
-    }
-  };
-
-  const handleConsentAction = async (requestId: string, action: 'approve' | 'deny') => {
-    try {
-      // Mock API call
-      toast({
-        title: 'Success',
-        description: `Request ${action}ed successfully`,
-      });
-      await Promise.all([fetchConsentRequests()]);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${action} request`,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleRevokeAccess = async (consentId: string) => {
-    try {
-      // Mock API call
-      toast({
-        title: 'Success',
-        description: 'Access revoked successfully',
-      });
-      await fetchConsentRequests();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to revoke access',
-        variant: 'destructive',
-      });
-    }
-  };
+  const token = refreshToken || localStorage.getItem('refreshToken') || '';
 
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        await Promise.all([
-          fetchConsentRequests(),
-          // fetchActiveConsents()
-        ]);
-      } catch (error) {
-        console.error('Error loading consent data:', error);
-        setError('Failed to load consent data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadData();
+    if (token) load();
   }, []);
 
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="space-y-4 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">Loading consent requests...</p>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
+  const load = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getMyConsentHistory(token);
+      setConsents(res.consents);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="space-y-4 text-center">
-            <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
-            <p className="text-muted-foreground">{error}</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              Try Again
-            </Button>
+  const handleRespond = async (id: string, action: 'approve' | 'deny') => {
+    setActingId(id);
+    try {
+      await respondToConsent(token, id, action);
+      setConsents(prev => prev.map(c =>
+        c.id === id ? { ...c, status: action === 'approve' ? 'approved' : 'denied', response_date: new Date().toISOString() } : c
+      ));
+      toast({ title: action === 'approve' ? 'Consent Approved' : 'Consent Denied', description: `The doctor has been notified.` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    setActingId(id);
+    try {
+      await revokeConsent(token, id);
+      setConsents(prev => prev.map(c => c.id === id ? { ...c, status: 'revoked' } : c));
+      toast({ title: 'Consent Revoked', description: 'Access has been revoked immediately.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const pending  = consents.filter(c => c.status === 'pending');
+  const history  = consents.filter(c => c.status !== 'pending');
+
+  const renderConsent = (c: ConsentItem) => (
+    <Card key={c.id} className="hover:shadow-md transition-shadow">
+      <CardContent className="p-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold">{c.doctor_name ?? 'Doctor'}</p>
+              <Badge variant={statusVariant(c.status)} className="capitalize text-xs">{c.status}</Badge>
+            </div>
+            {c.type && <p className="text-xs text-muted-foreground">Type: {c.type}</p>}
+            <p className="text-sm text-muted-foreground">{c.purpose}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Requested: {format(new Date(c.request_date), 'MMM dd, yyyy')}</span>
+              {c.response_date && <span>Responded: {format(new Date(c.response_date), 'MMM dd, yyyy')}</span>}
+              {c.expiry_date && c.status === 'approved' && <span>Expires: {format(new Date(c.expiry_date), 'MMM dd, yyyy')}</span>}
+            </div>
+          </div>
+
+          <div className="flex gap-2 shrink-0">
+            {c.status === 'pending' && (
+              <>
+                <Button size="sm" className="gap-1.5" disabled={actingId === c.id} onClick={() => handleRespond(c.id, 'approve')}>
+                  <ShieldCheck className="h-3.5 w-3.5" /> Approve
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1.5" disabled={actingId === c.id} onClick={() => handleRespond(c.id, 'deny')}>
+                  <ShieldOff className="h-3.5 w-3.5" /> Deny
+                </Button>
+              </>
+            )}
+            {c.status === 'approved' && (
+              <Button size="sm" variant="destructive" className="gap-1.5" disabled={actingId === c.id} onClick={() => handleRevoke(c.id)}>
+                <ShieldOff className="h-3.5 w-3.5" /> Revoke
+              </Button>
+            )}
           </div>
         </div>
-      </MainLayout>
-    );
-  }
+      </CardContent>
+    </Card>
+  );
+
+  const EmptyState = ({ icon: Icon, message }: { icon: React.ElementType; message: string }) => (
+    <Card><CardContent className="py-14 text-center">
+      <Icon className="h-9 w-9 mx-auto text-muted-foreground/40 mb-3" />
+      <p className="text-muted-foreground text-sm">{message}</p>
+    </CardContent></Card>
+  );
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Consent Management</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage who can access your health records
-            </p>
-          </div>
+      <div className="space-y-6 container mx-auto px-4 py-8">
+        <div>
+          <h1 className="text-3xl font-bold">Consent Management</h1>
+          <p className="text-muted-foreground mt-1">Control who can access your health records</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <AlertCircle className="h-5 w-5 text-yellow-500" />
-                Pending Requests
-              </CardTitle>
-              <CardDescription>
-                Doctors requesting access to your records
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {consentRequests.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No pending consent requests</p>
-                </div>
-              ) : (
-                consentRequests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex flex-col space-y-3 p-4 bg-muted/50 rounded-lg transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <h4 className="font-medium">{request.patient_name}</h4>
-                        <Badge variant="outline">{request.type}</Badge>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleConsentAction(request.id, 'approve')}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleConsentAction(request.id, 'deny')}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Deny
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p className="line-clamp-2">{request.purpose}</p>
-                      <p className="mt-1">
-                        Requested on: {new Date(request.request_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="pending">
+          <TabsList className="grid w-full sm:w-auto grid-cols-2">
+            <TabsTrigger value="pending">
+              Pending {!isLoading && pending.length > 0 && <span className="ml-1.5 text-xs opacity-60">({pending.length})</span>}
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              History {!isLoading && history.length > 0 && <span className="ml-1.5 text-xs opacity-60">({history.length})</span>}
+            </TabsTrigger>
+          </TabsList>
 
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                Active Consents
-              </CardTitle>
-              <CardDescription>
-                Doctors with current access to your records
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {approvedRequests.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No active consents</p>
-                </div>
-              ) : (
-                approvedRequests.map((consent) => (
-                  <div
-                    key={consent.id}
-                    className="flex flex-col space-y-3 p-4 bg-muted/50 rounded-lg transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <h4 className="font-medium">{consent.patient_name}</h4>
-                        <Badge variant="outline">{consent.patient_name}</Badge>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRevokeAccess(consent.id)}
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Revoke Access
-                      </Button>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>
-                        {consent.request_date}
-                      </p>
-                      {/* <p>
-                        Expires: {new Date(consent.expiryDate).toLocaleDateString()}
-                      </p> */}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="pending" className="space-y-3 mt-6">
+            {isLoading
+              ? [1, 2].map(i => <ConsentSkeleton key={i} />)
+              : pending.length === 0
+                ? <EmptyState icon={AlertCircle} message="No pending consent requests" />
+                : pending.map(renderConsent)
+            }
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-3 mt-6">
+            {isLoading
+              ? [1, 2].map(i => <ConsentSkeleton key={i} />)
+              : history.length === 0
+                ? <EmptyState icon={History} message="No consent history yet" />
+                : history.map(renderConsent)
+            }
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

@@ -82,9 +82,10 @@ const Login: React.FC = () => {
         navigate("/"); // fallback
         break;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Login failed:", error);
-    toast.error(error?.message || "Invalid credentials.");
+    const errorMessage = error instanceof Error ? error.message : "Invalid credentials.";
+    toast.error(errorMessage);
   } finally {
     setIsLoading(false);
   }
@@ -153,11 +154,11 @@ const Login: React.FC = () => {
               {isLoading ? "Logging in..." : "Log in"}
             </Button>
 
-            <div className="text-xs text-gray-500 mt-2">
+            {/* <div className="text-xs text-gray-500 mt-2">
               <div>Demo credentials:</div>
               <div>Patient: patient@health.com / password</div>
               <div>Provider: provider@health.com / password</div>
-            </div>
+            </div> */}
           </form>
         </CardContent>
 

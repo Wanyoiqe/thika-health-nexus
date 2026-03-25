@@ -109,13 +109,14 @@ export interface Vitals {
 }
 
 export interface HealthRecord {
-  id: string;
+  record_id: string;
+  id?: string;           // legacy alias
   appointment_id: string;
   patient_id: string;
-  provider_id: string;
-  patient_name: string;
+  provider_id?: string;
+  patient_name?: string;
   record_type: 'lab_results' | 'medication' | 'vitals';
-  data: LabResults | Medication | Vitals;
+  data: string | LabResults | Medication | Vitals; // API returns JSON string; parse before use
   created_at: string;
   updated_at: string;
 }
@@ -206,14 +207,54 @@ export type ReceptionistDashboardDetails = {
   data: ReceptionistData[];
 };
 
-// Dto for /api/health-records
+// Dto for /api/health-records/appointment/:appointmentId/:patientId
 export type HealthRecordResponseDTO = {
   result_code: number;
-  health_record: HealthRecord;
+  health_records: HealthRecord[];
 };
 
 // DTO for /api/providers/fetch_doctors_patients
 export type DoctorHealthRecordsResponseDTO = {
   result_code: number;
   health_records: HealthRecord[];
+};
+
+// Notification
+export interface AppNotification {
+  notification_id: string;
+  user_id: string;
+  type: 'appointment_booked' | 'consent_approved' | 'consent_denied' | 'health_record_created';
+  title: string;
+  message: string;
+  is_read: boolean;
+  related_id: string | null;
+  related_type: 'appointment' | 'consent' | 'health_record' | null;
+  created_at: string;
+}
+
+export type NotificationsResponseDTO = {
+  result_code: number;
+  notifications: AppNotification[];
+  unread_count: number;
+};
+
+// Consent types (updated)
+export interface ConsentItem {
+  id: string;
+  patient_id?: string;
+  patient_name?: string;
+  provider_id?: string;
+  doctor_name?: string;
+  health_record_id?: string;
+  type: string | null;
+  purpose: string;
+  status: 'pending' | 'approved' | 'denied' | 'revoked';
+  request_date: string;
+  response_date: string | null;
+  expiry_date: string | null;
+}
+
+export type ConsentsResponseDTO = {
+  result_code: number;
+  consents: ConsentItem[];
 };

@@ -15,6 +15,7 @@ import {
   Shield,
   Bell,
   DollarSign,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "@/AuthContext";
 
@@ -26,6 +27,7 @@ interface SidebarLinkProps {
   to: string;
   icon: React.ElementType;
   children: React.ReactNode;
+  onClick?: () => void;
 }
 
 // Navigation links based on user roles - we'll expand this later
@@ -76,13 +78,14 @@ const navLinks = {
   ],
 };
 
-const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
+const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children, onClick }) => {
   const { pathname } = useLocation();
   const isActive = pathname === to;
   
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={cn(
         "nav-link",
         isActive && "active"
@@ -96,10 +99,15 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) =
 
 const Sidebar: React.FC<SidebarProps> = ({ open }) => {
   const location = useLocation();
-  const { user, refreshToken } = useAuth();
+  const { user, logout } = useAuth();
   if (!open) {
     return null;
   }
+  
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/auth/login';
+  };
 
   return (
     <div className={cn(
@@ -207,14 +215,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open }) => {
             <SidebarLink to="/profile" icon={UserCog}>
               Profile
             </SidebarLink>
-            <SidebarLink to="/settings" icon={Settings}>
-              Settings
-            </SidebarLink>
-          </div>
-          
-          <div className="space-y-1">
-            <SidebarLink to="/privacy" icon={Shield}>
-              Privacy & Security
+            <SidebarLink onClick={handleLogout} to="#" icon={LogOut}>
+              Log Out
             </SidebarLink>
           </div>
         </nav>
