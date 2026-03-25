@@ -79,3 +79,27 @@ export const registerDoctor = async (token:string, formData:any) => {
         throw new Error(error.response?.data?.message || 'Registration failed');
     }
 };
+
+export const updateUserProfile = async (token: string, data: any) => {
+    try {
+        const response = await privateAPIUtil(token).put('/api/users/profile', data);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || 'Failed to update profile');
+    }
+};
+
+export const uploadProfilePicture = async (token: string, file: File) => {
+    try {
+        const formData = new FormData();
+        formData.append('profile_pic', file);
+        const response = await privateAPIUtil(token).post('/api/users/upload_picture', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error.response?.data?.message || 'Failed to upload profile picture');
+    }
+};

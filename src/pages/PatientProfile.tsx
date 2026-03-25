@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { fetchUserProfile } from '@/apis/auth';
+import { fetchUserProfile, updateUserProfile, uploadProfilePicture } from '@/apis/auth';
 
 const PatientProfile: React.FC = () => {
   const { user } = useAuth();
@@ -35,6 +35,8 @@ const PatientProfile: React.FC = () => {
     profileUrl: '',
   });
 
+  const API_URL = 'http://localhost:5000';
+
   useEffect(() => {
     if (refreshToken === null) {
       refreshToken = localStorage.getItem('refreshToken')!;
@@ -48,7 +50,6 @@ const PatientProfile: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await fetchUserProfile(token);
-      // Backend returns { user: { ... } } — extract what we can
       const raw = data?.user || data;
       setProfileData(prev => ({
         ...prev,
@@ -58,8 +59,8 @@ const PatientProfile: React.FC = () => {
         phone: raw?.phone_number || raw?.phone || user?.phone || '',
         gender: raw?.gender || '',
         profileUrl: raw?.profileUrl || '',
+        dateOfBirth: raw?.age ? '' : '', // Still need a specific DOB field if possible
       }));
-      // patient_id comes from the patient record attached to the user
       if (raw?.patient?.patient_id) {
         setPatientId(raw.patient.patient_id);
       }
@@ -75,32 +76,59 @@ const PatientProfile: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (!refreshToken) return;
+    setIsLoading(true);
     try {
-      // TODO: wire to PUT /api/users/profile once backend endpoint is available
+      await updateUserProfile(refreshToken, {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone,
+        gender: profileData.gender,
+        dateOfBirth: profileData.dateOfBirth,
+      });
       toast({
         title: 'Success',
         description: 'Profile updated successfully',
       });
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to update profile',
+        description: error.message || 'Failed to update profile',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // TODO: wire to file upload endpoint once available
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileData({ ...profileData, profileUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (file && refreshToken) {
+      setIsLoading(true);
+      try {
+        const result = await uploadProfilePicture(refreshToken, file);
+        setProfileData({ ...profileData, profileUrl: result.profileUrl });
+        toast({
+          title: 'Success',
+          description: 'Profile picture updated successfully',
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to upload profile picture',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
+  };
+
+  const getProfileImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
   };
 
   return (
@@ -121,7 +149,7 @@ const PatientProfile: React.FC = () => {
               {isEditing ? (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </>
               ) : (
                 'Edit Profile'
@@ -139,18 +167,18 @@ const PatientProfile: React.FC = () => {
             <CardContent className="space-y-6">
               {/* Profile Picture */}
               <div className="flex items-center gap-4">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profileData.profileUrl} />
-                  <AvatarFallback className="text-2xl">
+                <Avatar className="h-24 w-24 border">
+                  <AvatarImage src={getProfileImageUrl(profileData.profileUrl)} />
+                  <AvatarFallback className="text-2xl bg-secondary">
                     {profileData.firstName[0]}{profileData.lastName[0]}
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (
                   <div>
                     <Label htmlFor="profile-pic" className="cursor-pointer">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors">
                         <Camera className="h-4 w-4" />
-                        Change Photo
+                        {isLoading ? 'Uploading...' : 'Change Photo'}
                       </div>
                     </Label>
                     <Input
@@ -159,6 +187,7 @@ const PatientProfile: React.FC = () => {
                       accept="image/*"
                       className="hidden"
                       onChange={handleImageUpload}
+                      disabled={isLoading}
                     />
                   </div>
                 )}
@@ -166,7 +195,7 @@ const PatientProfile: React.FC = () => {
 
               {/* Form Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
                   <Input
                     id="firstName"
@@ -174,10 +203,10 @@ const PatientProfile: React.FC = () => {
                     onChange={(e) =>
                       setProfileData({ ...profileData, firstName: e.target.value })
                     }
-                    disabled={!isEditing}
+                    disabled={!isEditing || isLoading}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input
                     id="lastName"
@@ -185,10 +214,10 @@ const PatientProfile: React.FC = () => {
                     onChange={(e) =>
                       setProfileData({ ...profileData, lastName: e.target.value })
                     }
-                    disabled={!isEditing}
+                    disabled={!isEditing || isLoading}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
@@ -197,11 +226,11 @@ const PatientProfile: React.FC = () => {
                     disabled
                     className="bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-[10px] text-muted-foreground">
                     Email cannot be changed
                   </p>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
                     id="phone"
@@ -209,17 +238,17 @@ const PatientProfile: React.FC = () => {
                     onChange={(e) =>
                       setProfileData({ ...profileData, phone: e.target.value })
                     }
-                    disabled={!isEditing}
+                    disabled={!isEditing || isLoading}
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
                   <Select
                     value={profileData.gender}
                     onValueChange={(value) =>
                       setProfileData({ ...profileData, gender: value })
                     }
-                    disabled={!isEditing}
+                    disabled={!isEditing || isLoading}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -231,7 +260,7 @@ const PatientProfile: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="dob">Date of Birth</Label>
                   <Input
                     id="dob"
@@ -240,11 +269,11 @@ const PatientProfile: React.FC = () => {
                     onChange={(e) =>
                       setProfileData({ ...profileData, dateOfBirth: e.target.value })
                     }
-                    disabled={!isEditing}
+                    disabled={!isEditing || isLoading}
                   />
                 </div>
                 {patientId && (
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="mrn">Medical Record Number (MRN)</Label>
                     <Input
                       id="mrn"
@@ -252,8 +281,8 @@ const PatientProfile: React.FC = () => {
                       disabled
                       className="bg-muted"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      MRN cannot be changed
+                    <p className="text-[10px] text-muted-foreground">
+                      MRN is generated automatically and cannot be changed
                     </p>
                   </div>
                 )}
