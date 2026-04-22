@@ -112,14 +112,17 @@ const DoctorConsentManagement: React.FC = () => {
   const handleNewRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createConsentRequest({
+      // TODO: wire to backend createConsentRequest endpoint
+      const created: ConsentRequest = {
+        id: `cr-${Date.now()}`,
         patientId: newRequest.patientId,
+        patientName: 'Pending',
         type: newRequest.type,
         purpose: newRequest.purpose,
-      });
-
-      // Refresh the list after creating a new request
-      await fetchConsentRequests();
+        status: 'pending',
+        requestDate: new Date().toISOString(),
+      };
+      setConsentRequests((prev) => [created, ...prev]);
       
       setIsDialogOpen(false);
       setNewRequest({ patientId: '', type: '', purpose: '' });

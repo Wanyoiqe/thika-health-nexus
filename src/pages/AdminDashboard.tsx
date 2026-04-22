@@ -7,12 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, UserCog, Activity, Settings, Shield, TrendingUp } from "lucide-react";
+import { Users, UserCog, Activity, Settings, Shield, TrendingUp, ShieldCheck } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/AuthContext";
 import { fetchReceptionistDashboardDetails } from "@/apis/providers";
 import { fetchAllDoctors } from "@/apis/auth";
 import type { ReceptionistData, Doctor } from "@/types";
+import { TwoFactorSettings } from "@/components/security/TwoFactorSettings";
+import { PasswordPolicySettings } from "@/components/security/PasswordPolicySettings";
+import { SessionManagementSettings } from "@/components/security/SessionManagementSettings";
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -159,6 +162,9 @@ const AdminDashboard: React.FC = () => {
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="activity">System Activity</TabsTrigger>
             <TabsTrigger value="specializations">Specializations</TabsTrigger>
+            <TabsTrigger value="security">
+              <ShieldCheck className="h-4 w-4 mr-1.5" /> Security
+            </TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -273,6 +279,20 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="security" className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">Security &amp; Access</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure two-factor auth, password rules, and session lifecycle.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TwoFactorSettings defaultEmail={user?.email} />
+              <PasswordPolicySettings />
+            </div>
+            <SessionManagementSettings />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
