@@ -281,6 +281,20 @@ const AdminDashboard: React.FC = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="security" className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">Security &amp; Access</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure two-factor auth, password rules, and session lifecycle.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TwoFactorSettings defaultEmail={user?.email} />
+              <PasswordPolicySettings />
+            </div>
+            <SessionManagementSettings />
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-4">
             <h2 className="text-xl font-semibold">Hospital Settings</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
