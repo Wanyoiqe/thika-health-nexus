@@ -113,14 +113,14 @@ const DoctorConsentManagement: React.FC = () => {
     e.preventDefault();
     try {
       // TODO: wire to backend createConsentRequest endpoint
-      const created = {
+      const created: ConsentRequest = {
         id: `cr-${Date.now()}`,
         patientId: newRequest.patientId,
         patientName: 'Pending',
         type: newRequest.type,
         purpose: newRequest.purpose,
-        status: 'pending' as const,
-        requestedAt: new Date().toISOString(),
+        status: 'pending',
+        requestDate: new Date().toISOString(),
       };
       setConsentRequests((prev) => [created, ...prev]);
       
