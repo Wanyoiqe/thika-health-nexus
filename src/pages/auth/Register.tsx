@@ -202,6 +202,7 @@ const Register: React.FC = () => {
                 {errors.password && (
                   <p className="text-red-500 text-xs">{errors.password.message}</p>
                 )}
+                <PasswordStrengthMeter password={passwordValue} policy={policy} />
               </div>
 
               <div className="space-y-2">
