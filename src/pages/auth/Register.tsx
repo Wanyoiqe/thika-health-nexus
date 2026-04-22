@@ -59,6 +59,7 @@ const Register: React.FC = () => {
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors, isValid },
   } = useForm({
     resolver: yupResolver(schema),
@@ -73,6 +74,8 @@ const Register: React.FC = () => {
       role: "patient",
     },
   });
+
+  const passwordValue = watch("password");
 
   // 🟢 Submit handler
   const onSubmit = async (data: any) => {
