@@ -21,8 +21,11 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm, Controller } from "react-hook-form";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
+import { loadPasswordPolicy, validatePassword } from "@/lib/passwordPolicy";
+import { PasswordStrengthMeter } from "@/components/security/PasswordStrengthMeter";
 
-// 🟢 Validation Schema
+// 🟢 Validation Schema — built from the admin-configured password policy
+const policy = loadPasswordPolicy();
 const schema = yup.object().shape({
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),
@@ -31,7 +34,12 @@ const schema = yup.object().shape({
     .string()
     .required("Phone number is required")
     .matches(/^\+[1-9]\d{6,14}$/, "Enter a valid international phone number"),
-  password: yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
+  password: yup
+    .string()
+    .required("Password is required")
+    .test("policy", "Password does not meet the security policy", (value) =>
+      validatePassword(value || "", policy).valid
+    ),
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password"), ""], "Passwords must match")
