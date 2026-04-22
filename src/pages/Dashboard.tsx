@@ -111,7 +111,7 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Temporary role switcher for development */}
-        {process.env.NODE_ENV === "development" && (
+        {import.meta.env.DEV && (
           <div className="fixed bottom-4 right-4 bg-white p-3 shadow-lg rounded-lg border">
             <p className="text-sm font-medium mb-2">DEV: Switch View</p>
             <div className="flex gap-2">
